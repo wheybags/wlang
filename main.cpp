@@ -1,5 +1,6 @@
 #include "Tokeniser.hpp"
 #include "Parser.hpp"
+#include "PlainCGenerator.hpp"
 
 std::string inputString = R"STRING_RAW(
 
@@ -21,9 +22,12 @@ int main()
   ParseTree parser;
   const Root* ast = parser.parse(tokens);
 
-  std::string json;
-  dumpJson(ast, json);
-  puts(json.c_str());
+//  std::string json;
+//  dumpJson(ast, json);
+//  puts(json.c_str());
+
+  PlainCGenerator generator;
+  puts(generator.generate(ast).c_str());
 
   return 0;
 }

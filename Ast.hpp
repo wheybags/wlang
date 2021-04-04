@@ -96,28 +96,26 @@ struct CompareEqual
   Expression* right = nullptr;
 };
 
-using Node = std::variant<std::monostate,
-  Root,
-  FuncList,
-  Func,
-  FuncBody,
-  ReturnType,
-  Type,
-  ArgList,
-  Arg,
-  Expression,
-  Id,
-  CompareEqual>;
+#define FOR_EACH_AST_TYPE \
+  X(Root) \
+  X(FuncList) \
+  X(Func) \
+  X(FuncBody) \
+  X(ReturnType) \
+  X(Type) \
+  X(ArgList) \
+  X(Arg) \
+  X(Expression) \
+  X(Id) \
+  X(CompareEqual)
 
 
-void dumpJson(const Expression* node, std::string& str, int32_t tabIndex = 0);
-void dumpJson(const Root* node, std::string& str, int32_t tabIndex = 0);
-void dumpJson(const FuncList* node, std::string& str, int32_t tabIndex = 0);
-void dumpJson(const Func* node, std::string& str, int32_t tabIndex = 0);
-void dumpJson(const Id* node, std::string& str, int32_t tabIndex = 0);
-void dumpJson(const ArgList* node, std::string& str, int32_t tabIndex = 0);
-void dumpJson(const Arg* node, std::string& str, int32_t tabIndex = 0);
-void dumpJson(const FuncBody* node, std::string& str, int32_t tabIndex = 0);
-void dumpJson(const ReturnType* node, std::string& str, int32_t tabIndex = 0);
-void dumpJson(const Type* node, std::string& str, int32_t tabIndex = 0);
-void dumpJson(const CompareEqual* node, std::string& str, int32_t tabIndex = 0);
+using Node = std::variant<
+# define X(Type) Type,
+  FOR_EACH_AST_TYPE
+# undef X
+  std::monostate>;
+
+# define X(Type) void dumpJson(const Type* node, std::string& str, int32_t tabIndex = 0);
+FOR_EACH_AST_TYPE
+# undef X

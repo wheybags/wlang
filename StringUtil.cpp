@@ -43,8 +43,19 @@ namespace Str
       return false;
 
     if (prefix.empty())
-      return true;
+      return false;
 
     return memcmp(str.data(), prefix.data(), prefix.size()) == 0;
+  }
+
+  bool endsWith(std::string_view str, std::string_view suffix)
+  {
+    if (str.size() < suffix.size())
+      return false;
+
+    if (suffix.empty())
+      return false;
+
+    return memcmp(str.data() + str.size() - suffix.size(), suffix.data(), suffix.size()) == 0;
   }
 }

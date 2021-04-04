@@ -2,19 +2,13 @@
 #include "Assert.hpp"
 #include <vector>
 
-using Value = std::variant<std::string,
-  int32_t,
-  Root*,
-  FuncList*,
-  Func*,
-  FuncBody*,
-  ReturnType*,
-  Type*,
-  ArgList*,
-  Arg*,
-  Expression*,
-  Id*,
-  CompareEqual*>;
+using Value = std::variant<
+# define X(Type) Type*,
+  FOR_EACH_AST_TYPE
+# undef X
+
+  std::string,
+  int32_t>;
 
 void dumpJson(const Value& value, std::string& str, int32_t tabIndex)
 {
@@ -22,28 +16,13 @@ void dumpJson(const Value& value, std::string& str, int32_t tabIndex)
     str += "\"" + std::get<std::string>(value) + "\"";
   else if (std::holds_alternative<int32_t>(value))
     str += std::to_string(std::get<int32_t>(value));
-  else if (std::holds_alternative<Root *>(value))
-    dumpJson(std::get<Root *>(value), str, tabIndex);
-  else if (std::holds_alternative<FuncList *>(value))
-    dumpJson(std::get<FuncList *>(value), str, tabIndex);
-  else if (std::holds_alternative<Func *>(value))
-    dumpJson(std::get<Func *>(value), str, tabIndex);
-  else if (std::holds_alternative<FuncBody *>(value))
-    dumpJson(std::get<FuncBody *>(value), str, tabIndex);
-  else if (std::holds_alternative<ReturnType *>(value))
-    dumpJson(std::get<ReturnType *>(value), str, tabIndex);
-  else if (std::holds_alternative<Type *>(value))
-    dumpJson(std::get<Type *>(value), str, tabIndex);
-  else if (std::holds_alternative<ArgList *>(value))
-    dumpJson(std::get<ArgList *>(value), str, tabIndex);
-  else if (std::holds_alternative<Arg *>(value))
-    dumpJson(std::get<Arg *>(value), str, tabIndex);
-  else if (std::holds_alternative<Expression *>(value))
-    dumpJson(std::get<Expression *>(value), str, tabIndex);
-  else if (std::holds_alternative<Id *>(value))
-    dumpJson(std::get<Id *>(value), str, tabIndex);
-  else if (std::holds_alternative<CompareEqual *>(value))
-    dumpJson(std::get<CompareEqual *>(value), str, tabIndex);
+
+# define X(Type) \
+  else if (std::holds_alternative<Type*>(value)) \
+    dumpJson(std::get<Type*>(value), str, tabIndex);
+
+  FOR_EACH_AST_TYPE
+#undef X
   else
     message_and_abort("unknown node");
 }
@@ -95,7 +74,7 @@ void dumpJson(const std::vector<Value>& values, std::string& str, int32_t tabInd
 void dumpJson(const Expression* node, std::string& str, int32_t tabIndex)
 {
   if (std::holds_alternative<Id*>(*node))
-   dumpJson(std::get<Id*>(*node), str, tabIndex);
+    dumpJson(std::get<Id*>(*node), str, tabIndex);
   else if (std::holds_alternative<int32_t>(*node))
     dumpJson(std::get<int32_t>(*node), str, tabIndex);
   else if (std::holds_alternative<CompareEqual*>(*node))
