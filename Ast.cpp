@@ -170,14 +170,9 @@ void dumpJson(const ReturnStatement* node, std::string& str, int32_t tabIndex)
   dumpJson({{"nodeType", "ReturnStatement"}, {"retval", node->retval}}, str, tabIndex);
 }
 
-void dumpJson(const ReturnType* node, std::string& str, int32_t tabIndex)
-{
-  dumpJson({{"nodeType", "ReturnType"}, {"type", node->type}}, str, tabIndex);
-}
-
 void dumpJson(const Type* node, std::string& str, int32_t tabIndex)
 {
-  dumpJson({{"nodeType", "Type"}, {"id", node->id}}, str, tabIndex);
+  dumpJson({{"nodeType", "Type"}, {"name", node->name}}, str, tabIndex);
 }
 
 void dumpJson(const CompareEqual* node, std::string& str, int32_t tabIndex)

@@ -38,12 +38,12 @@ void PlainCGenerator::generate(const Func* node, int32_t tabIndex)
 {
   std::string prototype;
   {
-    prototype = builtinTypeMapping.at(node->returnType->type->id->name) + " " + node->name->name + "(";
+    prototype = builtinTypeMapping.at(node->returnType->name) + " " + node->name->name + "(";
 
     ArgList *argNode = node->argList;
     while (argNode)
     {
-      prototype += builtinTypeMapping.at(argNode->arg->type->id->name) + " " + argNode->arg->name->name + ",";
+      prototype += builtinTypeMapping.at(argNode->arg->type->name) + " " + argNode->arg->name->name + ",";
       argNode = argNode->next;
     }
 
@@ -81,7 +81,7 @@ void PlainCGenerator::generate(const Statement* node, std::string& str)
   else if (std::holds_alternative<VariableDeclaration*>(*node))
   {
     VariableDeclaration* variableDeclaration = std::get<VariableDeclaration*>(*node);
-    str += builtinTypeMapping.at(variableDeclaration->type->id->name) + " " + variableDeclaration->name->name;
+    str += builtinTypeMapping.at(variableDeclaration->type->name) + " " + variableDeclaration->name->name;
   }
   else if (std::holds_alternative<Assignment*>(*node))
   {

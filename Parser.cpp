@@ -113,7 +113,7 @@ public:
   static Func *parseFunc(ParseContext& ctx)
   {
     Func *func = ctx.parser.makeNode<Func>();
-    func->returnType = parseReturnType(ctx);
+    func->returnType = parseType(ctx);
     func->name = parseId(ctx);
     func->argList = parseArgList(ctx);
     func->funcBody = parseStatementList(ctx);
@@ -259,17 +259,10 @@ public:
     return expression;
   }
 
-  static ReturnType *parseReturnType(ParseContext& ctx)
-  {
-    ReturnType *returnType = ctx.parser.makeNode<ReturnType>();
-    returnType->type = parseType(ctx);
-    return returnType;
-  }
-
   static Type *parseType(ParseContext& ctx)
   {
     Type *type = ctx.parser.makeNode<Type>();
-    type->id = parseId(ctx);
+    type->name = ctx.pop();
     return type;
   }
 
@@ -277,9 +270,6 @@ public:
   {
     Id *id = ctx.parser.makeNode<Id>();
     id->name = ctx.pop();
-    release_assert(!id->name.empty() && id->name[0] == '_' || Str::isAlpha(id->name[0]));
-    for (char c : id->name)
-      release_assert(c == '_' || Str::isAlphaNumeric(c));
     return id;
   }
 
@@ -300,6 +290,10 @@ public:
     return value;
   }
 
+// validate names:
+//  release_assert(!id->name.empty() && id->name[0] == '_' || Str::isAlpha(id->name[0]));
+//  for (char c : id->name)
+//    release_assert(c == '_' || Str::isAlphaNumeric(c));
   static bool isTypeName(const std::string& str, const ParseContext&)
   {
     return builtinTypeNames.find(str) != builtinTypeNames.end();

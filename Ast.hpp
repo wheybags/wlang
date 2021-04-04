@@ -7,8 +7,8 @@
   Root                = FuncList
   FuncList            = Func
   FuncList            = FuncList Func
-  Func                = ReturnType Id "(" ArgList ")" StatementList
-  Func                = ReturnType Id "(" ")"         StatementList
+  Func                = Type Id "(" ArgList ")" StatementList
+  Func                = Type Id "(" ")"         StatementList
   StatementList       = Statement ";"
   StatementList       = "{" Statement ";" StatementList "}"
   Statement           = ReturnStatement
@@ -17,8 +17,6 @@
   VariableDeclaration = Type Id
   Assignment          = Expression "=" Expression
   ReturnStatement     = "return" Expression
-  ReturnType          = "void"
-  ReturnType          = Type
   Type                = Id
   ArgList             = Arg
   ArgList             = Arg "," ArgList
@@ -36,7 +34,6 @@ struct StatementList;
 struct VariableDeclaration;
 struct Assignment;
 struct ReturnStatement;
-struct ReturnType;
 struct Type;
 struct ArgList;
 struct Arg;
@@ -67,7 +64,7 @@ struct FuncList
 
 struct Func
 {
-  ReturnType* returnType = nullptr;
+  Type* returnType = nullptr;
   Id* name = nullptr;
   ArgList* argList = nullptr;
   StatementList* funcBody = nullptr;
@@ -113,14 +110,9 @@ struct ReturnStatement
   Expression* retval = nullptr;
 };
 
-struct ReturnType
-{
-  Type* type = nullptr;
-};
-
 struct Type
 {
-  Id* id = nullptr;
+  std::string name;
 };
 
 struct CompareEqual
@@ -138,7 +130,6 @@ struct CompareEqual
   X(VariableDeclaration) \
   X(Assignment) \
   X(ReturnStatement) \
-  X(ReturnType) \
   X(Type) \
   X(ArgList) \
   X(Arg) \
