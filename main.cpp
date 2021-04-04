@@ -21,7 +21,7 @@ i32 main()
 int main()
 {
   std::vector<std::string> tokens = tokenise(inputString);
-  ParseTree parser;
+  Parser parser;
   const Root* ast = parser.parse(tokens);
 
   std::string json;
