@@ -83,6 +83,13 @@ void PlainCGenerator::generate(const Statement* node, std::string& str)
     VariableDeclaration* variableDeclaration = std::get<VariableDeclaration*>(*node);
     str += builtinTypeMapping.at(variableDeclaration->type->id->name) + " " + variableDeclaration->name->name;
   }
+  else if (std::holds_alternative<Assignment*>(*node))
+  {
+    Assignment* assignment = std::get<Assignment*>(*node);
+    generate(assignment->left, str);
+    str += " = ";
+    generate(assignment->right, str);
+  }
   else
   {
     message_and_abort("bad Statement");

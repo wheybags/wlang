@@ -12,6 +12,7 @@ i32 func(i32 x)
 i32 main()
 {
   i32 var;
+  var = 1;
   return 0;
 }
 

@@ -12,6 +12,7 @@ const std::string KWCloseBrace = "}";
 const std::string KWCompareEqual = "==";
 const std::string KWReturn = "return";
 const std::string KWSemicolon = ";";
+const std::string KWAssign = "=";
 
 const std::unordered_set<std::string> builtinTypeNames {"i32"};
 
@@ -206,7 +207,21 @@ public:
     }
     else
     {
-      message_and_abort("invalid statement");
+      Expression* expression = parseExpression(ctx);
+
+      if (ctx.peek() == KWAssign)
+      {
+        ctx.pop();
+
+        Assignment* assignment = ctx.parser.makeNode<Assignment>();
+        assignment->left = expression;
+        assignment->right = parseExpression(ctx);
+        *statement = assignment;
+      }
+      else
+      {
+        message_and_abort("invalid statement");
+      }
     }
 
     return statement;

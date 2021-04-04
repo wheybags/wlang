@@ -13,7 +13,9 @@
   StatementList       = "{" Statement ";" StatementList "}"
   Statement           = ReturnStatement
   Statement           = VariableDeclaration
+  Statement           = Assignment
   VariableDeclaration = Type Id
+  Assignment          = Expression "=" Expression
   ReturnStatement     = "return" Expression
   ReturnType          = "void"
   ReturnType          = Type
@@ -32,6 +34,7 @@ struct FuncList;
 struct Func;
 struct StatementList;
 struct VariableDeclaration;
+struct Assignment;
 struct ReturnStatement;
 struct ReturnType;
 struct Type;
@@ -48,7 +51,8 @@ using Expression = std::variant<std::monostate,
 
 using Statement = std::variant<std::monostate,
   ReturnStatement*,
-  VariableDeclaration*>;
+  VariableDeclaration*,
+  Assignment*>;
 
 struct Root
 {
@@ -98,6 +102,12 @@ struct VariableDeclaration
   Id* name = nullptr;
 };
 
+struct Assignment
+{
+  Expression* left = nullptr;
+  Expression* right = nullptr;
+};
+
 struct ReturnStatement
 {
   Expression* retval = nullptr;
@@ -126,6 +136,7 @@ struct CompareEqual
   X(StatementList) \
   X(Statement) \
   X(VariableDeclaration) \
+  X(Assignment) \
   X(ReturnStatement) \
   X(ReturnType) \
   X(Type) \
