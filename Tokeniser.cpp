@@ -22,7 +22,7 @@ std::vector<std::string> tokenise(const std::string& input)
     {
       breakToken();
     }
-    else if (c == '(' || c == ')' || c == '{' || c== '}' || c == ';')
+    else if (c == '(' || c == ')' || c == '{' || c== '}' || c == ';' || c == ',')
     {
       breakToken();
       tokens.emplace_back(std::string(1, c));

@@ -4,7 +4,7 @@
 
 std::string inputString = R"STRING_RAW(
 
-i32 func(i32 x)
+i32 func(i32 x, i32 y)
 {
   return x == 1;
 }

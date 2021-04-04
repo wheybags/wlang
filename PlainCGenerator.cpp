@@ -43,12 +43,12 @@ void PlainCGenerator::generate(const Func* node, int32_t tabIndex)
     ArgList *argNode = node->argList;
     while (argNode)
     {
-      prototype += builtinTypeMapping.at(argNode->arg->type->name) + " " + argNode->arg->name->name + ",";
+      prototype += builtinTypeMapping.at(argNode->arg->type->name) + " " + argNode->arg->name->name + ", ";
       argNode = argNode->next;
     }
 
-    if (Str::endsWith(prototype, ","))
-      prototype.resize(prototype.size() - 1);
+    if (Str::endsWith(prototype, ", "))
+      prototype.resize(prototype.size() - 2);
 
     prototype += ")";
   }

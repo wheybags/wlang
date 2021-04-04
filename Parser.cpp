@@ -45,12 +45,12 @@ public:
     return *retval;
   }
 
-  bool empty()
+  bool empty() const
   {
     return remaining == 0;
   }
 
-  size_t has(int32_t count)
+  size_t has(int32_t count) const
   {
     return remaining >= count;
   }
@@ -130,6 +130,10 @@ public:
     {
       ArgList *argList = ctx.parser.makeNode<ArgList>();
       argList->arg = parseArg(ctx);
+
+      release_assert(ctx.peek() == KWCloseBracket || ctx.peek() == KWComma);
+      if (ctx.peek() == KWComma)
+        ctx.pop();
 
       if (retval == nullptr)
         retval = argList;
