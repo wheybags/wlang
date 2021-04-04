@@ -87,6 +87,8 @@ void dumpJson(const Statement* node, std::string& str, int32_t tabIndex)
 {
   if (std::holds_alternative<ReturnStatement*>(*node))
     dumpJson(std::get<ReturnStatement*>(*node), str, tabIndex);
+  else if (std::holds_alternative<VariableDeclaration*>(*node))
+    dumpJson(std::get<VariableDeclaration*>(*node), str, tabIndex);
   else
     message_and_abort("empty expression");
 }
@@ -149,6 +151,11 @@ void dumpJson(const StatementList* node, std::string& str, int32_t tabIndex)
     node = node->next;
   }
   dumpJson(values, str, tabIndex);
+}
+
+void dumpJson(const VariableDeclaration* node, std::string& str, int32_t tabIndex)
+{
+  dumpJson({{"nodeType", "VariableDeclaration"}, {"type", node->type}, {"name", node->name}}, str, tabIndex);
 }
 
 void dumpJson(const ReturnStatement* node, std::string& str, int32_t tabIndex)

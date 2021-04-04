@@ -1,5 +1,6 @@
 #include "Parser.hpp"
 #include <optional>
+#include <unordered_set>
 #include "Assert.hpp"
 #include "StringUtil.hpp"
 
@@ -11,6 +12,8 @@ const std::string KWCloseBrace = "}";
 const std::string KWCompareEqual = "==";
 const std::string KWReturn = "return";
 const std::string KWSemicolon = ";";
+
+const std::unordered_set<std::string> builtinTypeNames {"i32"};
 
 class ParseTree;
 
@@ -194,29 +197,19 @@ public:
       returnStatement->retval = parseExpression(ctx);
       *statement = returnStatement;
     }
+    else if (isTypeName(ctx.peek(), ctx))
+    {
+      VariableDeclaration* variableDeclaration = ctx.parser.makeNode<VariableDeclaration>();
+      variableDeclaration->type = parseType(ctx);
+      variableDeclaration->name = parseId(ctx);
+      *statement = variableDeclaration;
+    }
     else
     {
       message_and_abort("invalid statement");
     }
 
     return statement;
-  }
-
-  static std::optional<int32_t> parseInt32(std::string_view str)
-  {
-    // TODO: overflow check
-
-    int32_t value = 0;
-
-    for (char c : str)
-    {
-      if (Str::isNumeric(c))
-        value = value * 10 + (int32_t(c) - int32_t('0'));
-      else
-        return std::nullopt;
-    }
-
-    return value;
   }
 
   static Expression *parseExpression(ParseContext& ctx)
@@ -273,6 +266,28 @@ public:
     for (char c : id->name)
       release_assert(c == '_' || Str::isAlphaNumeric(c));
     return id;
+  }
+
+  static std::optional<int32_t> parseInt32(std::string_view str)
+  {
+    // TODO: overflow check
+
+    int32_t value = 0;
+
+    for (char c : str)
+    {
+      if (Str::isNumeric(c))
+        value = value * 10 + (int32_t(c) - int32_t('0'));
+      else
+        return std::nullopt;
+    }
+
+    return value;
+  }
+
+  static bool isTypeName(const std::string& str, const ParseContext&)
+  {
+    return builtinTypeNames.find(str) != builtinTypeNames.end();
   }
 };
 

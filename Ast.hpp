@@ -4,31 +4,34 @@
 #include <variant>
 
 /*
-  Root             = FuncList
-  FuncList         = Func
-  FuncList         = FuncList Func
-  Func             = ReturnType Id "(" ArgList ")" StatementList
-  Func             = ReturnType Id "(" ")"         StatementList
-  StatementList    = Statement ";"
-  StatementList    = "{" Statement ";" StatementList "}"
-  Statement        = ReturnStatement
-  ReturnStatement  = "return" Expression
-  ReturnType       = "void"
-  ReturnType       = Type
-  Type             = Id
-  ArgList          = Arg
-  ArgList          = Arg "," ArgList
-  Arg              = Type Id
-  Expression       = Id
-  Expression       = Number
-  Expression       = CompareEquals
-  CompareEquals    = Expression "==" Expression
+  Root                = FuncList
+  FuncList            = Func
+  FuncList            = FuncList Func
+  Func                = ReturnType Id "(" ArgList ")" StatementList
+  Func                = ReturnType Id "(" ")"         StatementList
+  StatementList       = Statement ";"
+  StatementList       = "{" Statement ";" StatementList "}"
+  Statement           = ReturnStatement
+  Statement           = VariableDeclaration
+  VariableDeclaration = Type Id
+  ReturnStatement     = "return" Expression
+  ReturnType          = "void"
+  ReturnType          = Type
+  Type                = Id
+  ArgList             = Arg
+  ArgList             = Arg "," ArgList
+  Arg                 = Type Id
+  Expression          = Id
+  Expression          = Number
+  Expression          = CompareEquals
+  CompareEquals       = Expression "==" Expression
  */
 
 struct Root;
 struct FuncList;
 struct Func;
 struct StatementList;
+struct VariableDeclaration;
 struct ReturnStatement;
 struct ReturnType;
 struct Type;
@@ -44,7 +47,8 @@ using Expression = std::variant<std::monostate,
 >;
 
 using Statement = std::variant<std::monostate,
-  ReturnStatement*>;
+  ReturnStatement*,
+  VariableDeclaration*>;
 
 struct Root
 {
@@ -88,6 +92,12 @@ struct StatementList
   StatementList* next = nullptr;
 };
 
+struct VariableDeclaration
+{
+  Type* type = nullptr;
+  Id* name = nullptr;
+};
+
 struct ReturnStatement
 {
   Expression* retval = nullptr;
@@ -115,6 +125,7 @@ struct CompareEqual
   X(Func) \
   X(StatementList) \
   X(Statement) \
+  X(VariableDeclaration) \
   X(ReturnStatement) \
   X(ReturnType) \
   X(Type) \

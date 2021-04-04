@@ -78,6 +78,11 @@ void PlainCGenerator::generate(const Statement* node, std::string& str)
     str += "return ";
     generate(std::get<ReturnStatement*>(*node)->retval, str);
   }
+  else if (std::holds_alternative<VariableDeclaration*>(*node))
+  {
+    VariableDeclaration* variableDeclaration = std::get<VariableDeclaration*>(*node);
+    str += builtinTypeMapping.at(variableDeclaration->type->id->name) + " " + variableDeclaration->name->name;
+  }
   else
   {
     message_and_abort("bad Statement");

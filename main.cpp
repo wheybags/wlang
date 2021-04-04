@@ -11,7 +11,8 @@ i32 func(i32 x)
 
 i32 main()
 {
-    return 0;
+  i32 var;
+  return 0;
 }
 
 )STRING_RAW";
@@ -22,9 +23,10 @@ int main()
   ParseTree parser;
   const Root* ast = parser.parse(tokens);
 
-//  std::string json;
-//  dumpJson(ast, json);
-//  puts(json.c_str());
+  std::string json;
+  dumpJson(ast, json);
+  puts(json.c_str());
+  puts("\n");
 
   PlainCGenerator generator;
   puts(generator.generate(ast).c_str());
