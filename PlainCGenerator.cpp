@@ -1,5 +1,6 @@
 #include "PlainCGenerator.hpp"
 #include "StringUtil.hpp"
+#include "Assert.hpp"
 #include <unordered_map>
 
 
@@ -57,28 +58,54 @@ void PlainCGenerator::generate(const Func* node, int32_t tabIndex)
   functionBodies += Str::space(tabIndex) + prototype + "\n{\n";
   tabIndex++;
   {
-    functionBodies += Str::space(tabIndex) + "return ";
-    generate(node->funcBody->retval, functionBodies, 0);
-    functionBodies += ";\n";
+    StatementList* statementList = node->funcBody;
+    while (statementList)
+    {
+      functionBodies += Str::space(tabIndex);
+      generate(statementList->statement, functionBodies);
+      functionBodies += "\n";
+      statementList = statementList->next;
+    }
   }
   tabIndex--;
   functionBodies += "}\n\n";
 }
 
-void PlainCGenerator::generate(const Expression* node, std::string& str, int32_t tabIndex)
+void PlainCGenerator::generate(const Statement* node, std::string& str)
 {
-  str += Str::space(tabIndex);
+  if (std::holds_alternative<ReturnStatement*>(*node))
+  {
+    str += "return ";
+    generate(std::get<ReturnStatement*>(*node)->retval, str);
+  }
+  else
+  {
+    message_and_abort("bad Statement");
+  }
 
+  str += ";";
+}
+
+void PlainCGenerator::generate(const Expression* node, std::string& str)
+{
   if (std::holds_alternative<Id*>(*node))
-    str += std::get<Id*>(*node)->name;
+  {
+    str += std::get<Id *>(*node)->name;
+  }
   else if (std::holds_alternative<int32_t>(*node))
+  {
     str += std::to_string(std::get<int32_t>(*node));
+  }
   else if (std::holds_alternative<CompareEqual*>(*node))
   {
     const CompareEqual* compareNode = std::get<CompareEqual*>(*node);
-    generate(compareNode->left, str, 0);
+    generate(compareNode->left, str);
     str += " == ";
-    generate(compareNode->right, str, 0);
+    generate(compareNode->right, str);
+  }
+  else
+  {
+    message_and_abort("bad Expression");
   }
 }
 

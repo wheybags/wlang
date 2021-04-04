@@ -12,7 +12,8 @@ private:
   void generate(const Root* node, int32_t tabIndex);
   void generate(const FuncList* node, int32_t tabIndex);
   void generate(const Func* node, int32_t tabIndex);
-  void generate(const Expression* node, std::string& str, int32_t tabIndex);
+  void generate(const Statement* node, std::string& str);
+  void generate(const Expression* node, std::string& str);
 
 private:
   std::string headers;

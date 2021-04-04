@@ -79,6 +79,16 @@ void dumpJson(const Expression* node, std::string& str, int32_t tabIndex)
     dumpJson(std::get<int32_t>(*node), str, tabIndex);
   else if (std::holds_alternative<CompareEqual*>(*node))
     dumpJson(std::get<CompareEqual*>(*node), str, tabIndex);
+  else
+    message_and_abort("empty expression");
+}
+
+void dumpJson(const Statement* node, std::string& str, int32_t tabIndex)
+{
+  if (std::holds_alternative<ReturnStatement*>(*node))
+    dumpJson(std::get<ReturnStatement*>(*node), str, tabIndex);
+  else
+    message_and_abort("empty expression");
 }
 
 void dumpJson(const Root* node, std::string& str, int32_t tabIndex)
@@ -130,9 +140,20 @@ void dumpJson(const Arg* node, std::string& str, int32_t tabIndex)
   dumpJson({{"nodeType", "Arg"}, {"type", node->type}, {"name", node->name}}, str, tabIndex);
 }
 
-void dumpJson(const FuncBody* node, std::string& str, int32_t tabIndex)
+void dumpJson(const StatementList* node, std::string& str, int32_t tabIndex)
 {
-  dumpJson({{"nodeType", "FuncBody"}, {"retval", node->retval}}, str, tabIndex);
+  std::vector<Value> values;
+  while (node)
+  {
+    values.push_back(node->statement);
+    node = node->next;
+  }
+  dumpJson(values, str, tabIndex);
+}
+
+void dumpJson(const ReturnStatement* node, std::string& str, int32_t tabIndex)
+{
+  dumpJson({{"nodeType", "ReturnStatement"}, {"retval", node->retval}}, str, tabIndex);
 }
 
 void dumpJson(const ReturnType* node, std::string& str, int32_t tabIndex)

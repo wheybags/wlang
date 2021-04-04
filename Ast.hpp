@@ -4,28 +4,32 @@
 #include <variant>
 
 /*
-  Root          = FuncList
-  FuncList      = Func
-  FuncList      = FuncList Func
-  Func          = ReturnType Id "(" ArgList ")" FuncBody
-  Func          = ReturnType Id "(" ")"         FuncBody
-  FuncBody      = "{" "return" Expression ";" "}"
-  ReturnType    = "void"
-  ReturnType    = Type
-  Type          = Id
-  ArgList       = Arg
-  ArgList       = Arg "," ArgList
-  Arg           = Type Id
-  Expression    = Id
-  Expression    = Number
-  Expression    = CompareEquals
-  CompareEquals = Expression "==" Expression
+  Root             = FuncList
+  FuncList         = Func
+  FuncList         = FuncList Func
+  Func             = ReturnType Id "(" ArgList ")" StatementList
+  Func             = ReturnType Id "(" ")"         StatementList
+  StatementList    = Statement ";"
+  StatementList    = "{" Statement ";" StatementList "}"
+  Statement        = ReturnStatement
+  ReturnStatement  = "return" Expression
+  ReturnType       = "void"
+  ReturnType       = Type
+  Type             = Id
+  ArgList          = Arg
+  ArgList          = Arg "," ArgList
+  Arg              = Type Id
+  Expression       = Id
+  Expression       = Number
+  Expression       = CompareEquals
+  CompareEquals    = Expression "==" Expression
  */
 
 struct Root;
 struct FuncList;
 struct Func;
-struct FuncBody;
+struct StatementList;
+struct ReturnStatement;
 struct ReturnType;
 struct Type;
 struct ArgList;
@@ -38,6 +42,9 @@ using Expression = std::variant<std::monostate,
   int32_t,
   CompareEqual*
 >;
+
+using Statement = std::variant<std::monostate,
+  ReturnStatement*>;
 
 struct Root
 {
@@ -55,7 +62,7 @@ struct Func
   ReturnType* returnType = nullptr;
   Id* name = nullptr;
   ArgList* argList = nullptr;
-  FuncBody* funcBody = nullptr;
+  StatementList* funcBody = nullptr;
 };
 
 struct Id
@@ -75,7 +82,13 @@ struct Arg
   Id* name = nullptr;
 };
 
-struct FuncBody
+struct StatementList
+{
+  Statement* statement = nullptr;
+  StatementList* next = nullptr;
+};
+
+struct ReturnStatement
 {
   Expression* retval = nullptr;
 };
@@ -100,7 +113,9 @@ struct CompareEqual
   X(Root) \
   X(FuncList) \
   X(Func) \
-  X(FuncBody) \
+  X(StatementList) \
+  X(Statement) \
+  X(ReturnStatement) \
   X(ReturnType) \
   X(Type) \
   X(ArgList) \

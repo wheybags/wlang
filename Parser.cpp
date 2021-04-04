@@ -112,7 +112,7 @@ public:
     func->returnType = parseReturnType(ctx);
     func->name = parseId(ctx);
     func->argList = parseArgList(ctx);
-    func->funcBody = parseFuncBody(ctx);
+    func->funcBody = parseStatementList(ctx);
     return func;
   }
 
@@ -147,17 +147,59 @@ public:
     return arg;
   }
 
-  static FuncBody *parseFuncBody(ParseContext& ctx)
+  static StatementList* parseStatementList(ParseContext& ctx)
   {
-    release_assert(ctx.pop() == KWOpenBrace);
-    FuncBody *funcBody = ctx.parser.makeNode<FuncBody>();
+    if(ctx.peek() == KWOpenBrace)
+    {
+      ctx.pop();
 
-    release_assert(ctx.pop() == KWReturn);
-    funcBody->retval = parseExpression(ctx);
-    release_assert(ctx.pop() == KWSemicolon);
+      StatementList* head = nullptr;
 
-    release_assert(ctx.pop() == KWCloseBrace);
-    return funcBody;
+      StatementList* previous = nullptr;
+      while (ctx.peek() != KWCloseBrace)
+      {
+        StatementList* statementList = ctx.parser.makeNode<StatementList>();
+
+        statementList->statement = parseStatement(ctx);
+        release_assert(ctx.pop() == KWSemicolon);
+
+        if (!head)
+          head = statementList;
+
+        if (previous)
+          previous->next = statementList;
+
+        previous = statementList;
+      }
+      release_assert(ctx.pop() == KWCloseBrace);
+
+      return head;
+    }
+    else
+    {
+      StatementList* statementList = ctx.parser.makeNode<StatementList>();
+      statementList->statement = parseStatement(ctx);
+      release_assert(ctx.pop() == KWSemicolon);
+      return statementList;
+    }
+  }
+
+  static Statement* parseStatement(ParseContext& ctx)
+  {
+    Statement* statement = ctx.parser.makeNode<Statement>();
+    if (ctx.peek() == KWReturn)
+    {
+      ctx.pop();
+      ReturnStatement* returnStatement = ctx.parser.makeNode<ReturnStatement>();
+      returnStatement->retval = parseExpression(ctx);
+      *statement = returnStatement;
+    }
+    else
+    {
+      message_and_abort("invalid statement");
+    }
+
+    return statement;
   }
 
   static std::optional<int32_t> parseInt32(std::string_view str)
