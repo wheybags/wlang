@@ -17,7 +17,8 @@ std::string PlainCGenerator::generate(const Root *root)
 
 static const std::unordered_map<std::string, std::string> builtinTypeMapping
 {
-  {"i32", "int32_t"}
+  {"i32", "int32_t"},
+  {"bool", "bool"}
 };
 
 void PlainCGenerator::generate(const Root* node, int32_t tabIndex)

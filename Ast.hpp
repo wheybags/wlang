@@ -2,6 +2,8 @@
 #include <string>
 #include <cstdint>
 #include <variant>
+#include <vector>
+#include <unordered_map>
 
 /*
   Root                = FuncList
@@ -40,6 +42,8 @@ struct Arg;
 struct Id;
 struct CompareEqual;
 
+struct Scope;
+
 using Expression = std::variant<std::monostate,
   Id*,
   int32_t,
@@ -54,6 +58,7 @@ using Statement = std::variant<std::monostate,
 struct Root
 {
   FuncList* funcList = nullptr;
+  Scope* rootScope = nullptr;
 };
 
 struct FuncList
@@ -68,6 +73,7 @@ struct Func
   Id* name = nullptr;
   ArgList* argList = nullptr;
   StatementList* funcBody = nullptr;
+  Scope* scope = nullptr;
 };
 
 struct Id
@@ -121,6 +127,12 @@ struct CompareEqual
   Expression* right = nullptr;
 };
 
+struct Scope
+{
+  Scope* parent = nullptr;
+  std::unordered_map<std::string, VariableDeclaration*> variables;
+};
+
 #define FOR_EACH_AST_TYPE \
   X(Root) \
   X(FuncList) \
@@ -136,13 +148,6 @@ struct CompareEqual
   X(Expression) \
   X(Id) \
   X(CompareEqual)
-
-
-using Node = std::variant<
-# define X(Type) Type,
-  FOR_EACH_AST_TYPE
-# undef X
-  std::monostate>;
 
 # define X(Type) void dumpJson(const Type* node, std::string& str, int32_t tabIndex = 0);
 FOR_EACH_AST_TYPE

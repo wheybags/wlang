@@ -14,7 +14,18 @@ const std::string KWReturn = "return";
 const std::string KWSemicolon = ";";
 const std::string KWAssign = "=";
 
-const std::unordered_set<std::string> builtinTypeNames {"i32"};
+std::unordered_set<std::string> keywords =
+{
+  KWComma,
+  KWOpenBracket,
+  KWCloseBracket,
+  KWOpenBrace,
+  KWCloseBrace,
+  KWCompareEqual,
+  KWReturn,
+  KWSemicolon,
+  KWAssign,
+};
 
 class Parser;
 
@@ -29,7 +40,7 @@ public:
   const std::string& peek(int32_t offset = 0)
   {
     release_assert(has(offset + 1));
-    return *next;
+    return *(next + offset);
   }
 
   const std::string& pop()
@@ -54,7 +65,12 @@ public:
     return remaining >= count;
   }
 
+  Scope* getScope() { return scopeStack.back(); }
+  void pushScope(Scope* scope) { scopeStack.push_back(scope); }
+  void popScope() { scopeStack.pop_back(); }
+
 private:
+  std::vector<Scope*> scopeStack;
   const std::string* next = nullptr;
   size_t remaining = 0;
 
@@ -80,13 +96,30 @@ static std::optional<int32_t> parseInt32(std::string_view str)
   return value;
 }
 
-// validate names:
-//  release_assert(!id->name.empty() && id->name[0] == '_' || Str::isAlpha(id->name[0]));
-//  for (char c : id->name)
-//    release_assert(c == '_' || Str::isAlphaNumeric(c));
-static bool isTypeName(const std::string& str, const ParseContext&)
+bool isValidId(const std::string& name)
 {
-  return builtinTypeNames.find(str) != builtinTypeNames.end();
+  if (name.empty())
+    return false;
+  if (name[0] != '_' && !Str::isAlpha(name[0]))
+    return false;
+
+  for (char c : name)
+  {
+    if (c != '_' && !Str::isAlphaNumeric(c))
+      return false;
+  }
+
+  return keywords.find(name) == keywords.end();
+}
+
+Parser::Parser()
+{
+  for (const auto& name: {"i32", "bool"})
+  {
+    Type* type = makeNode<Type>();
+    type->name = name;
+    types[name] = type;
+  }
 }
 
 const Root* Parser::parse(const std::vector<std::string>& tokenStrings)
@@ -131,8 +164,16 @@ Func* Parser::parseFunc(ParseContext& ctx)
   Func *func = makeNode<Func>();
   func->returnType = parseType(ctx);
   func->name = parseId(ctx);
+
+  func->scope = makeNode<Scope>();
+  func->scope->parent = ctx.getScope();
+  ctx.pushScope(func->scope);
+
   func->argList = parseArgList(ctx);
   func->funcBody = parseStatementList(ctx);
+
+  ctx.popScope();
+
   return func;
 }
 
@@ -218,11 +259,16 @@ Statement* Parser::parseStatement(ParseContext& ctx)
     returnStatement->retval = parseExpression(ctx);
     *statement = returnStatement;
   }
-  else if (isTypeName(ctx.peek(), ctx))
+  else if (ctx.has(2) && isValidId(ctx.peek()) && isValidId(ctx.peek(1)))
   {
     VariableDeclaration* variableDeclaration = makeNode<VariableDeclaration>();
     variableDeclaration->type = parseType(ctx);
     variableDeclaration->name = parseId(ctx);
+
+    auto it = ctx.getScope()->variables.find(variableDeclaration->name->name);
+    release_assert(it == ctx.getScope()->variables.end());
+    ctx.getScope()->variables.emplace_hint(it, variableDeclaration->name->name, variableDeclaration);
+
     *statement = variableDeclaration;
   }
   else
@@ -236,6 +282,7 @@ Statement* Parser::parseStatement(ParseContext& ctx)
       Assignment* assignment = makeNode<Assignment>();
       assignment->left = expression;
       assignment->right = parseExpression(ctx);
+      assignments.push_back(assignment);
       *statement = assignment;
     }
     else
@@ -281,9 +328,21 @@ Expression* Parser::parseExpression(ParseContext& ctx)
 
 Type* Parser::parseType(ParseContext& ctx)
 {
-  Type* type = makeNode<Type>();
-  type->name = ctx.pop();
-  return type;
+  const std::string& typeName = ctx.pop();
+  auto it = types.find(typeName);
+
+  if (it == types.end())
+  {
+    release_assert(isValidId(typeName));
+    Type* type = makeNode<Type>();
+    type->name = ctx.pop();
+    types.emplace_hint(it, typeName, type);
+    return type;
+  }
+  else
+  {
+    return it->second;
+  }
 }
 
 Id* Parser::parseId(ParseContext& ctx)
@@ -296,7 +355,9 @@ Id* Parser::parseId(ParseContext& ctx)
 Root* Parser::parseRoot(ParseContext& ctx)
 {
   Root* rootNode = makeNode<Root>();
+  rootNode->rootScope = makeNode<Scope>();
+  ctx.pushScope(rootNode->rootScope);
+
   rootNode->funcList = parseFuncList(ctx);
   return rootNode;
 }
-
