@@ -24,7 +24,7 @@
   ArgList             = Arg "," ArgList
   Arg                 = Type Id
   Expression          = Id
-  Expression          = Number
+  Expression          = Int32
   Expression          = CompareEquals
   CompareEquals       = Expression "==" Expression
  */

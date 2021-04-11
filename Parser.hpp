@@ -3,6 +3,7 @@
 #include <unordered_map>
 #include <vector>
 #include "Ast.hpp"
+#include "Tokeniser.hpp"
 
 class ParseContext;
 
@@ -11,7 +12,7 @@ class Parser
 public:
   Parser();
 
-  const Root* parse(const std::vector<std::string>& tokenStrings);
+  const Root* parse(const std::vector<Token>& tokens);
 
 private:
   template<typename T> T* makeNode();

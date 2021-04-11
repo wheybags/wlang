@@ -20,7 +20,7 @@ i32 main()
 
 int main()
 {
-  std::vector<std::string> tokens = tokenise(inputString);
+  std::vector<Token> tokens = tokenise(inputString);
   Parser parser;
   const Root* ast = parser.parse(tokens);
 

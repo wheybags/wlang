@@ -4,49 +4,28 @@
 #include "Assert.hpp"
 #include "StringUtil.hpp"
 
-const std::string KWComma = ",";
-const std::string KWOpenBracket = "(";
-const std::string KWCloseBracket = ")";
-const std::string KWOpenBrace = "{";
-const std::string KWCloseBrace = "}";
-const std::string KWCompareEqual = "==";
-const std::string KWReturn = "return";
-const std::string KWSemicolon = ";";
-const std::string KWAssign = "=";
 
-std::unordered_set<std::string> keywords =
-{
-  KWComma,
-  KWOpenBracket,
-  KWCloseBracket,
-  KWOpenBrace,
-  KWCloseBrace,
-  KWCompareEqual,
-  KWReturn,
-  KWSemicolon,
-  KWAssign,
-};
 
 class Parser;
 
 class ParseContext
 {
 public:
-  ParseContext(const std::string* strings, size_t size)
-    : next(strings)
+  ParseContext(const Token* tokens, size_t size)
+    : next(tokens)
     , remaining(size)
   {}
 
-  const std::string& peek(int32_t offset = 0)
+  const Token& peek(int32_t offset = 0)
   {
     release_assert(has(offset + 1));
     return *(next + offset);
   }
 
-  const std::string& pop()
+  const Token& pop()
   {
     release_assert(!empty());
-    const std::string* retval = next;
+    const Token* retval = next;
     next++;
     remaining--;
 #ifndef NDEBUG
@@ -71,46 +50,13 @@ public:
 
 private:
   std::vector<Scope*> scopeStack;
-  const std::string* next = nullptr;
+  const Token* next = nullptr;
   size_t remaining = 0;
 
 #ifndef NDEBUG
-  const std::string* popped = nullptr;
+  const Token* popped = nullptr;
 #endif
 };
-
-static std::optional<int32_t> parseInt32(std::string_view str)
-{
-  // TODO: overflow check
-
-  int32_t value = 0;
-
-  for (char c : str)
-  {
-    if (Str::isNumeric(c))
-      value = value * 10 + (int32_t(c) - int32_t('0'));
-    else
-      return std::nullopt;
-  }
-
-  return value;
-}
-
-bool isValidId(const std::string& name)
-{
-  if (name.empty())
-    return false;
-  if (name[0] != '_' && !Str::isAlpha(name[0]))
-    return false;
-
-  for (char c : name)
-  {
-    if (c != '_' && !Str::isAlphaNumeric(c))
-      return false;
-  }
-
-  return keywords.find(name) == keywords.end();
-}
 
 Parser::Parser()
 {
@@ -122,7 +68,7 @@ Parser::Parser()
   }
 }
 
-const Root* Parser::parse(const std::vector<std::string>& tokenStrings)
+const Root* Parser::parse(const std::vector<Token>& tokenStrings)
 {
   ParseContext tokens(tokenStrings.data(), tokenStrings.size());
   return parseRoot(tokens);
@@ -179,17 +125,17 @@ Func* Parser::parseFunc(ParseContext& ctx)
 
 ArgList* Parser::parseArgList(ParseContext& ctx)
 {
-  release_assert(ctx.pop() == KWOpenBracket);
+  release_assert(ctx.pop().type == Token::Type::OpenBracket);
   ArgList *retval = nullptr;
 
   ArgList *previous = nullptr;
-  while (ctx.peek() != KWCloseBracket)
+  while (ctx.peek().type != Token::Type::CloseBracket)
   {
     ArgList *argList = makeNode<ArgList>();
     argList->arg = parseArg(ctx);
 
-    release_assert(ctx.peek() == KWCloseBracket || ctx.peek() == KWComma);
-    if (ctx.peek() == KWComma)
+    release_assert(ctx.peek().type == Token::Type::CloseBracket || ctx.peek().type == Token::Type::Comma);
+    if (ctx.peek().type == Token::Type::Comma)
       ctx.pop();
 
     if (retval == nullptr)
@@ -199,7 +145,7 @@ ArgList* Parser::parseArgList(ParseContext& ctx)
       previous->next = argList;
     previous = argList;
   }
-  release_assert(ctx.pop() == KWCloseBracket);
+  release_assert(ctx.pop().type == Token::Type::CloseBracket);
 
   return retval;
 }
@@ -214,19 +160,19 @@ Arg* Parser::parseArg(ParseContext& ctx)
 
 StatementList* Parser::parseStatementList(ParseContext& ctx)
 {
-  if(ctx.peek() == KWOpenBrace)
+  if(ctx.peek().type == Token::Type::OpenBrace)
   {
     ctx.pop();
 
     StatementList* head = nullptr;
 
     StatementList* previous = nullptr;
-    while (ctx.peek() != KWCloseBrace)
+    while (ctx.peek().type != Token::Type::CloseBrace)
     {
       StatementList* statementList = makeNode<StatementList>();
 
       statementList->statement = parseStatement(ctx);
-      release_assert(ctx.pop() == KWSemicolon);
+      release_assert(ctx.pop().type == Token::Type::Semicolon);
 
       if (!head)
         head = statementList;
@@ -236,7 +182,7 @@ StatementList* Parser::parseStatementList(ParseContext& ctx)
 
       previous = statementList;
     }
-    release_assert(ctx.pop() == KWCloseBrace);
+    release_assert(ctx.pop().type == Token::Type::CloseBrace);
 
     return head;
   }
@@ -244,7 +190,7 @@ StatementList* Parser::parseStatementList(ParseContext& ctx)
   {
     StatementList* statementList = makeNode<StatementList>();
     statementList->statement = parseStatement(ctx);
-    release_assert(ctx.pop() == KWSemicolon);
+    release_assert(ctx.pop().type == Token::Type::Semicolon);
     return statementList;
   }
 }
@@ -252,14 +198,14 @@ StatementList* Parser::parseStatementList(ParseContext& ctx)
 Statement* Parser::parseStatement(ParseContext& ctx)
 {
   Statement* statement = makeNode<Statement>();
-  if (ctx.peek() == KWReturn)
+  if (ctx.peek().type == Token::Type::Return)
   {
     ctx.pop();
     ReturnStatement* returnStatement = makeNode<ReturnStatement>();
     returnStatement->retval = parseExpression(ctx);
     *statement = returnStatement;
   }
-  else if (ctx.has(2) && isValidId(ctx.peek()) && isValidId(ctx.peek(1)))
+  else if (ctx.has(2) && ctx.peek().type == Token::Type::Id && ctx.peek(1).type == Token::Type::Id)
   {
     VariableDeclaration* variableDeclaration = makeNode<VariableDeclaration>();
     variableDeclaration->type = parseType(ctx);
@@ -275,7 +221,7 @@ Statement* Parser::parseStatement(ParseContext& ctx)
   {
     Expression* expression = parseExpression(ctx);
 
-    if (ctx.peek() == KWAssign)
+    if (ctx.peek().type == Token::Type::Assign)
     {
       ctx.pop();
 
@@ -298,11 +244,10 @@ Expression* Parser::parseExpression(ParseContext& ctx)
 {
   Expression* expression = makeNode<Expression>();
 
-  const std::string &token = ctx.peek();
-  std::optional<int32_t> intVal = parseInt32(token);
-  if (intVal.has_value())
+  const Token &token = ctx.peek();
+  if (token.type == Token::Type::Int32)
   {
-    *expression = *intVal;
+    *expression = token.i32Value;
     ctx.pop();
   }
   else
@@ -310,7 +255,7 @@ Expression* Parser::parseExpression(ParseContext& ctx)
     *expression = parseId(ctx);
   }
 
-  if (ctx.peek() == KWCompareEqual)
+  if (ctx.peek().type == Token::Type::CompareEqual)
   {
     ctx.pop();
 
@@ -328,15 +273,16 @@ Expression* Parser::parseExpression(ParseContext& ctx)
 
 Type* Parser::parseType(ParseContext& ctx)
 {
-  const std::string& typeName = ctx.pop();
-  auto it = types.find(typeName);
+  const Token& typeName = ctx.pop();
+  release_assert(typeName.type == Token::Type::Id);
+
+  auto it = types.find(typeName.idValue);
 
   if (it == types.end())
   {
-    release_assert(isValidId(typeName));
     Type* type = makeNode<Type>();
-    type->name = ctx.pop();
-    types.emplace_hint(it, typeName, type);
+    type->name = typeName.idValue;
+    types.emplace_hint(it, typeName.idValue, type);
     return type;
   }
   else
@@ -348,7 +294,8 @@ Type* Parser::parseType(ParseContext& ctx)
 Id* Parser::parseId(ParseContext& ctx)
 {
   Id *id = makeNode<Id>();
-  id->name = ctx.pop();
+  release_assert(ctx.peek().type == Token::Type::Id);
+  id->name = ctx.pop().idValue;
   return id;
 }
 
