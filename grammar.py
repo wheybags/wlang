@@ -61,7 +61,13 @@ def make_grammar(str_table: str) -> typing.Dict[str, "NonTerminal"]:
     rules: typing.Dict[str, NonTerminal] = {key: NonTerminal(key) for key in rules_temp.keys()}
 
     for name in rules:
-        for production in rules_temp[name]:
+        for prod_index in range(len(rules_temp[name])):
+            production = rules_temp[name][prod_index]
+            if len(production) > 1 and 'Nil' in production:
+                raise Exception('Nil can only appear alone')
+            if production == ['Nil'] and prod_index != len(rules_temp[name]) -1:
+                raise Exception('Nil has to be the last production')
+
             for i in range(len(production)):
                 if production[i] != 'Nil' and production[i][0].isupper():
                     production[i] = rules[production[i]]
@@ -93,19 +99,48 @@ class Grammar:
     def __init__(self, str_table: str):
         self.rules: typing.Dict[str, NonTerminal] = make_grammar(str_table)
 
+    def can_be_nil(self, name: str) -> bool:
+        for production in self.rules[name].productions:
+            if production[0] == 'Nil':
+                return True
+            elif isinstance(production[0], NonTerminal):
+                test_prod = production
+                while True:
+                    if not isinstance(test_prod[0], NonTerminal):
+                        break
+                    if not self.can_be_nil(test_prod[0].name):
+                        break
+
+                    test_prod = test_prod[1:]
+
+                    if len(test_prod) == 0:
+                        return True
+
+        return False
+
     def _first_internal(self, name: str) -> typing.List[typing.List[str]]:
         retval = []
         for production in self.rules[name].productions:
-            if isinstance(production[0], NonTerminal):
-                prod_items = []
-                for x in self.first(production[0].name):
-                    for item in x:
-                        prod_items.append(item)
-                retval.append(prod_items)
+            prod_temp = production
+            prod_firsts = []
+            while len(prod_temp):
+                if not isinstance(prod_temp[0], NonTerminal):
+                    if prod_temp[0] != 'Nil':
+                        prod_firsts.append(prod_temp[0])
+                    break
 
-            # TODO: handle fallthrough in case of Nil
-            elif production[0] != 'Nil':
-                retval.append([production[0]])
+                for x in self.first(prod_temp[0].name):
+                    for item in x:
+                        prod_firsts.append(item)
+
+                if not self.can_be_nil(prod_temp[0].name):
+                    break
+
+                prod_temp = prod_temp[1:]
+
+            if len(prod_firsts):
+                retval.append(prod_firsts)
+
         return retval
 
     def first(self, name: str) -> typing.List[typing.List[str]]:
@@ -133,9 +168,6 @@ class Grammar:
         strs = strs[:-1]
         return " ".join(strs)
 
-    # def _can_be_nil(self, items: typing.List[typing.Union[str, NonTerminal]]) -> bool:
-    #     pass
-    #
     #
     # def follow(self, name: str, _visited=None) -> typing.Set[str]:
     #     if _visited is None:
@@ -178,6 +210,101 @@ class Grammar:
     #     return " ".join(strs)
 
 
+def test_can_be_nil():
+    rules = Grammar("""
+        Root = "3" Y
+        Y = A | "1"
+        A = "2" | Nil
+        """)
+    assert not rules.can_be_nil('Root')
+    assert rules.can_be_nil('A')
+    assert rules.can_be_nil('Y')
+
+    rules = Grammar("""
+        Root = "x" Y
+        Y = A B C D
+        A = "1" | Nil
+        B = "2" | Nil
+        C = "3" | Nil
+        D = "4" | Nil
+        """)
+    assert not rules.can_be_nil('Root')
+    assert rules.can_be_nil('A')
+    assert rules.can_be_nil('B')
+    assert rules.can_be_nil('C')
+    assert rules.can_be_nil('D')
+    assert rules.can_be_nil('Y')
+
+    rules = Grammar("""
+        Root = "x" Y
+        Y = A B C D
+        A = "1" | Nil
+        B = "2" | Nil
+        C = "3"
+        D = "4" | Nil
+        """)
+    assert not rules.can_be_nil('Root')
+    assert rules.can_be_nil('A')
+    assert rules.can_be_nil('B')
+    assert not rules.can_be_nil('C')
+    assert rules.can_be_nil('D')
+    assert not rules.can_be_nil('Y')
+
+
+def test_first():
+    rules = Grammar("""
+        Root = "3" Y
+        Y = A | "1"
+        A = "2" | Nil
+        """)
+    assert rules.first('Root') == [['"3"']]
+    assert rules.first('A') == [['"2"']]
+    assert rules.first('Y') == [['"2"'], ['"1"']]
+
+    rules = Grammar("""
+        Root = "3" Y
+        Y = A | "1"
+        A = "2" | "4"
+        """)
+    assert rules.first('Root') == [['"3"']]
+    assert rules.first('A') == [['"2"'], ['"4"']]
+    assert rules.first('Y') == [['"2"', '"4"'], ['"1"']]
+
+    rules = Grammar("""
+        Root = "x" Y
+        Y = A B C D
+        A = "1" | Nil
+        B = "2" | Nil
+        C = "3"
+        D = "4" | Nil
+        """)
+    assert rules.first('A') == [['"1"']]
+    assert rules.first('B') == [['"2"']]
+    assert rules.first('C') == [['"3"']]
+    assert rules.first('D') == [['"4"']]
+    assert rules.first('Y') == [['"1"', '"2"', '"3"']]
+
+    rules = Grammar("""
+        Root = "x" Y
+        Y = A B C D
+        A = "1" | Nil
+        B = "2" | Nil
+        C = "3" | Nil
+        D = "4" | Nil
+        """)
+    assert rules.first('A') == [['"1"']]
+    assert rules.first('B') == [['"2"']]
+    assert rules.first('C') == [['"3"']]
+    assert rules.first('D') == [['"4"']]
+    assert rules.first('Y') == [['"1"', '"2"', '"3"', '"4"']]
+
+
+def test():
+    test_can_be_nil()
+    test_first()
+    print("tests passed!")
+
+
 def main():
     rules = Grammar(grammar)
 
@@ -192,4 +319,5 @@ def main():
 
 
 if __name__ == "__main__":
+    test()
     main()
