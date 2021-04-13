@@ -77,10 +77,13 @@ def make_grammar(str_table: str) -> typing.Dict[str, "NonTerminal"]:
     return rules
 
 
+Production = typing.List[typing.Union[str, "NonTerminal"]]
+
+
 class NonTerminal:
     def __init__(self, name: str):
         self.name = name
-        self.productions: typing.List[typing.List[typing.Union[str, NonTerminal]]] = []
+        self.productions: typing.List[Production] = []
 
     def rules_str(self):
         strs = []
@@ -168,46 +171,52 @@ class Grammar:
         strs = strs[:-1]
         return " ".join(strs)
 
-    #
-    # def follow(self, name: str, _visited=None) -> typing.Set[str]:
-    #     if _visited is None:
-    #         _visited = set()
-    #
-    #     if name in _visited:
-    #         return set()
-    #
-    #     _visited.add(name)
-    #
-    #     follows: typing.Set[str] = set()
-    #     nt = self.rules[name]
-    #
-    #     if name == 'Root':
-    #         follows.add('$End')
-    #
-    #     for other_name in self.rules:
-    #         other_nt = self.rules[other_name]
-    #         for production in other_nt.productions:
-    #             for i in range(len(production)):
-    #                 if nt is production[i]:
-    #
-    #                     if i+1 == len(production) or self._can_be_nil(production[i+1:]):
-    #                         follows = follows.union(self.follow(other_nt.name, _visited))
-    #
-    #                     if i+1 < len(production):
-    #                         # need to handle a nil symbol in the middle
-    #                         if isinstance(production[i+1], NonTerminal):
-    #                             for x in self.first(production[i+1].name):
-    #                                 for item in x:
-    #                                     follows.add(item)
-    #                         else:
-    #                             follows.add(production[i+1])
-    #     return follows
-    #
-    # def str_follow(self, name: str) -> str:
-    #     strs = [f"{name} {self._pad(name)}="]
-    #     for item in self.follow(name):
-    #         strs.append(item)
-    #     return " ".join(strs)
+    def follow(self, name: str, _visited=None) -> typing.Set[str]:
+        if _visited is None:
+            _visited = set()
+
+        if name in _visited:
+            return set()
+
+        _visited.add(name)
+
+        follows: typing.Set[str] = set()
+        nt = self.rules[name]
+
+        if name == 'Root':
+            follows.add('$End')
+
+        for other_name in self.rules:
+            other_nt = self.rules[other_name]
+            for production in other_nt.productions:
+                for i in range(len(production)):
+                    if nt is production[i]:
+                        prod_temp = production[i:]
+                        while True:
+                            if len(prod_temp) == 1:
+                                if isinstance(prod_temp[0], str) or prod_temp[0] is nt or self.can_be_nil(prod_temp[0].name):
+                                    follows = follows.union(self.follow(other_nt.name, _visited))
+                                break
+                            else:
+                                next_symbol = prod_temp[1]
+                                if isinstance(next_symbol, NonTerminal):
+                                    for x in self.first(next_symbol.name):
+                                        for item in x:
+                                            follows.add(item)
+                                    if not self.can_be_nil(next_symbol.name):
+                                        break
+                                else:
+                                    follows.add(next_symbol)
+                                    break
+
+                            prod_temp = prod_temp[1:]
+        return follows
+
+    def str_follow(self, name: str) -> str:
+        strs = [f"{name} {self._pad(name)}="]
+        for item in self.follow(name):
+            strs.append(item)
+        return " ".join(strs)
 
 
 def test_can_be_nil():
@@ -299,9 +308,37 @@ def test_first():
     assert rules.first('Y') == [['"1"', '"2"', '"3"', '"4"']]
 
 
+def test_follow():
+    rules = Grammar("""
+        Root = A Y
+        Y = A | "1"
+        A = "2" | "3"
+        """)
+
+    assert rules.follow('Root') == {'$End'}
+    assert rules.follow('A') == {'"1"', '"2"', '"3"', '$End'}
+    assert rules.follow('Y') == {'$End'}
+
+    rules = Grammar("""
+        Root = "x" Y
+        Y = A B C D
+        A = "1" | Nil
+        B = "2" | Nil
+        C = "3"
+        D = "4" | Nil
+        """)
+
+    assert rules.follow('Root') == {'$End'}
+    assert rules.follow('Y') == {'$End'}
+    assert rules.follow('A') == {'"2"', '"3"'}
+    assert rules.follow('B') == {'"3"'}
+    assert rules.follow('C') == {'"4"', '$End'}
+
+
 def test():
     test_can_be_nil()
     test_first()
+    test_follow()
     print("tests passed!")
 
 
@@ -312,10 +349,10 @@ def main():
     for name in rules.rules:
         print('   ', rules.str_first(name))
 
-    # print()
-    # print("Follows:")
-    # for name in rules.rules:
-    #     print('   ', rules.str_follow(name))
+    print()
+    print("Follows:")
+    for name in rules.rules:
+        print('   ', rules.str_follow(name))
 
 
 if __name__ == "__main__":
