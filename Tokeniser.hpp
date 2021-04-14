@@ -17,12 +17,15 @@ struct Token
     CompareEqual,
     Return,
     Semicolon,
-    Assign
+    Assign,
+    End
   };
 
   Type type;
   std::string idValue;
   int32_t i32Value;
 };
+
+using TT = Token::Type;
 
 std::vector<Token> tokenise(std::string_view input);

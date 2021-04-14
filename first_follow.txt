@@ -1,0 +1,37 @@
+Firsts:
+    Root           = $Id
+    FuncList       = $Id
+    FuncList'      = $Id | Nil
+    Func           = $Id
+    Func'          = $Id | ")"
+    Block          = "{"
+    StatementList  = "return" $Id
+    StatementList' = "return" $Id | Nil
+    Statement      = "return" | $Id
+    Statement'     = $Id | "==" Nil "="
+    Expression     = $Id | $Int32
+    Expression'    = "==" | Nil
+    Expression''   = "=="
+    Type           = $Id
+    ArgList        = $Id
+    ArgList'       = "," | Nil
+    Arg            = $Id
+
+Follows:
+    Root           =
+    FuncList       = $End
+    FuncList'      = $End
+    Func           = $Id $End
+    Func'          = $Id $End
+    Block          = $Id $End
+    StatementList  = "}"
+    StatementList' = "}"
+    Statement      = ";"
+    Statement'     = ";"
+    Expression     = ";" "="
+    Expression'    = ";" "="
+    Expression''   = ";" "="
+    Type           = $Id
+    ArgList        = ")"
+    ArgList'       = ")"
+    Arg            = "," ")"

@@ -5,34 +5,10 @@
 #include <vector>
 #include <unordered_map>
 
-/*
-  Root                = FuncList
-  FuncList            = Func
-  FuncList            = FuncList Func
-  Func                = Type Id "(" ArgList ")" StatementList
-  Func                = Type Id "(" ")"         StatementList
-  StatementList       = Statement ";"
-  StatementList       = "{" Statement ";" StatementList "}"
-  Statement           = ReturnStatement
-  Statement           = VariableDeclaration
-  Statement           = Assignment
-  VariableDeclaration = Type Id
-  Assignment          = Expression "=" Expression
-  ReturnStatement     = "return" Expression
-  Type                = Id
-  ArgList             = Arg
-  ArgList             = Arg "," ArgList
-  Arg                 = Type Id
-  Expression          = Id
-  Expression          = Int32
-  Expression          = CompareEquals
-  CompareEquals       = Expression "==" Expression
- */
-
 struct Root;
 struct FuncList;
 struct Func;
-struct StatementList;
+struct Block;
 struct VariableDeclaration;
 struct Assignment;
 struct ReturnStatement;
@@ -72,8 +48,7 @@ struct Func
   Type* returnType = nullptr;
   Id* name = nullptr;
   ArgList* argList = nullptr;
-  StatementList* funcBody = nullptr;
-  Scope* scope = nullptr;
+  Block* funcBody = nullptr;
 };
 
 struct Id
@@ -93,10 +68,10 @@ struct Arg
   Id* name = nullptr;
 };
 
-struct StatementList
+struct Block
 {
-  Statement* statement = nullptr;
-  StatementList* next = nullptr;
+  std::vector<Statement*> statements;
+  Scope* scope = nullptr;
 };
 
 struct VariableDeclaration
@@ -137,7 +112,7 @@ struct Scope
   X(Root) \
   X(FuncList) \
   X(Func) \
-  X(StatementList) \
+  X(Block) \
   X(Statement) \
   X(VariableDeclaration) \
   X(Assignment) \

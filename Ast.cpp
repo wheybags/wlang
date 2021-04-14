@@ -144,14 +144,11 @@ void dumpJson(const Arg* node, std::string& str, int32_t tabIndex)
   dumpJson({{"nodeType", "Arg"}, {"type", node->type}, {"name", node->name}}, str, tabIndex);
 }
 
-void dumpJson(const StatementList* node, std::string& str, int32_t tabIndex)
+void dumpJson(const Block* node, std::string& str, int32_t tabIndex)
 {
   std::vector<Value> values;
-  while (node)
-  {
-    values.push_back(node->statement);
-    node = node->next;
-  }
+  for (const auto& statement : node->statements)
+    values.emplace_back(statement);
   dumpJson(values, str, tabIndex);
 }
 

@@ -5,23 +5,25 @@ import typing
 # https://stackoverflow.com/questions/20317198/purpose-of-first-and-follow-sets-in-ll1-parsers
 
 grammar = """
-  Root                = FuncList
+  Root                = FuncList $End
   FuncList            = Func FuncList'
   FuncList'           = FuncList | Nil
   Func                = Type $Id "(" Func'
-  Func'               = ArgList ")" StatementList | ")" StatementList
-  StatementList       = Statement ";" | "{" Statement ";" StatementList "}"
+  Func'               = ArgList ")" Block | ")" Block
+  Block               = "{" StatementList "}"
+  StatementList       = Statement ";" StatementList'
+  StatementList'      = StatementList | Nil
   Statement           = "return" Expression | $Id Statement'
   
   //                    Decl  Assign 
-  Statement'          = $Id | Expression'' "=" Expression 
+  Statement'          = $Id | Expression' "=" Expression 
+  Expression          = $Id Expression' | $Int32 Expression'
+  Expression'         = Expression'' | Nil
+  Expression''        = "==" Expression
   Type                = $Id
   ArgList             = Arg ArgList'
   ArgList'            = "," ArgList | Nil
   Arg                 = Type $Id
-  Expression          = $Id Expression' | $Int32 Expression'
-  Expression'         = Expression'' | Nil
-  Expression''        = "==" Expression
 """
 
 
@@ -126,15 +128,20 @@ class Grammar:
         for production in self.rules[name].productions:
             prod_temp = production
             prod_firsts = []
+
+            def prod_firsts_append(sym: str):
+                if sym == 'Nil' and 'Nil' in prod_firsts:
+                    return
+                prod_firsts.append(sym)
+
             while len(prod_temp):
                 if not isinstance(prod_temp[0], NonTerminal):
-                    if prod_temp[0] != 'Nil':
-                        prod_firsts.append(prod_temp[0])
+                    prod_firsts_append(prod_temp[0])
                     break
 
                 for x in self.first(prod_temp[0].name):
                     for item in x:
-                        prod_firsts.append(item)
+                        prod_firsts_append(item)
 
                 if not self.can_be_nil(prod_temp[0].name):
                     break
@@ -183,9 +190,6 @@ class Grammar:
         follows: typing.Set[str] = set()
         nt = self.rules[name]
 
-        if name == 'Root':
-            follows.add('$End')
-
         for other_name in self.rules:
             other_nt = self.rules[other_name]
             for production in other_nt.productions:
@@ -210,7 +214,7 @@ class Grammar:
                                     break
 
                             prod_temp = prod_temp[1:]
-        return follows
+        return follows - {'Nil'}
 
     def str_follow(self, name: str) -> str:
         strs = [f"{name} {self._pad(name)}="]
@@ -221,7 +225,7 @@ class Grammar:
 
 def test_can_be_nil():
     rules = Grammar("""
-        Root = "3" Y
+        Root = "3" Y $End
         Y = A | "1"
         A = "2" | Nil
         """)
@@ -230,7 +234,7 @@ def test_can_be_nil():
     assert rules.can_be_nil('Y')
 
     rules = Grammar("""
-        Root = "x" Y
+        Root = "x" Y $End
         Y = A B C D
         A = "1" | Nil
         B = "2" | Nil
@@ -262,16 +266,16 @@ def test_can_be_nil():
 
 def test_first():
     rules = Grammar("""
-        Root = "3" Y
+        Root = "3" Y $End
         Y = A | "1"
         A = "2" | Nil
         """)
     assert rules.first('Root') == [['"3"']]
-    assert rules.first('A') == [['"2"']]
-    assert rules.first('Y') == [['"2"'], ['"1"']]
+    assert rules.first('A') == [['"2"'], ['Nil']]
+    assert rules.first('Y') == [['"2"', 'Nil'], ['"1"']]
 
     rules = Grammar("""
-        Root = "3" Y
+        Root = "3" Y $End
         Y = A | "1"
         A = "2" | "4"
         """)
@@ -280,47 +284,47 @@ def test_first():
     assert rules.first('Y') == [['"2"', '"4"'], ['"1"']]
 
     rules = Grammar("""
-        Root = "x" Y
+        Root = "x" Y $End
         Y = A B C D
         A = "1" | Nil
         B = "2" | Nil
         C = "3"
         D = "4" | Nil
         """)
-    assert rules.first('A') == [['"1"']]
-    assert rules.first('B') == [['"2"']]
+    assert rules.first('A') == [['"1"'], ['Nil']]
+    assert rules.first('B') == [['"2"'], ['Nil']]
     assert rules.first('C') == [['"3"']]
-    assert rules.first('D') == [['"4"']]
-    assert rules.first('Y') == [['"1"', '"2"', '"3"']]
+    assert rules.first('D') == [['"4"'], ['Nil']]
+    assert rules.first('Y') == [['"1"', 'Nil', '"2"', '"3"']]
 
     rules = Grammar("""
-        Root = "x" Y
+        Root = "x" Y $End
         Y = A B C D
         A = "1" | Nil
         B = "2" | Nil
         C = "3" | Nil
         D = "4" | Nil
         """)
-    assert rules.first('A') == [['"1"']]
-    assert rules.first('B') == [['"2"']]
-    assert rules.first('C') == [['"3"']]
-    assert rules.first('D') == [['"4"']]
-    assert rules.first('Y') == [['"1"', '"2"', '"3"', '"4"']]
+    assert rules.first('A') == [['"1"'], ['Nil']]
+    assert rules.first('B') == [['"2"'], ['Nil']]
+    assert rules.first('C') == [['"3"'], ['Nil']]
+    assert rules.first('D') == [['"4"'], ['Nil']]
+    assert rules.first('Y') == [['"1"', 'Nil', '"2"', '"3"', '"4"']]
 
 
 def test_follow():
     rules = Grammar("""
-        Root = A Y
+        Root = A Y $End
         Y = A | "1"
         A = "2" | "3"
         """)
 
-    assert rules.follow('Root') == {'$End'}
+    assert rules.follow('Root') == set()
     assert rules.follow('A') == {'"1"', '"2"', '"3"', '$End'}
     assert rules.follow('Y') == {'$End'}
 
     rules = Grammar("""
-        Root = "x" Y
+        Root = "x" Y $End
         Y = A B C D
         A = "1" | Nil
         B = "2" | Nil
@@ -328,7 +332,7 @@ def test_follow():
         D = "4" | Nil
         """)
 
-    assert rules.follow('Root') == {'$End'}
+    assert rules.follow('Root') == set()
     assert rules.follow('Y') == {'$End'}
     assert rules.follow('A') == {'"2"', '"3"'}
     assert rules.follow('B') == {'"3"'}
@@ -339,7 +343,6 @@ def test():
     test_can_be_nil()
     test_first()
     test_follow()
-    print("tests passed!")
 
 
 def main():

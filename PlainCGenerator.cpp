@@ -59,13 +59,11 @@ void PlainCGenerator::generate(const Func* node, int32_t tabIndex)
   functionBodies += Str::space(tabIndex) + prototype + "\n{\n";
   tabIndex++;
   {
-    StatementList* statementList = node->funcBody;
-    while (statementList)
+    for (const Statement* statement : node->funcBody->statements)
     {
       functionBodies += Str::space(tabIndex);
-      generate(statementList->statement, functionBodies);
+      generate(statement, functionBodies);
       functionBodies += "\n";
-      statementList = statementList->next;
     }
   }
   tabIndex--;

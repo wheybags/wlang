@@ -123,5 +123,6 @@ std::vector<Token> tokenise(std::string_view input)
 
   breakToken();
 
+  tokens.push_back(Token{Token::Type::End});
   return tokens;
 }

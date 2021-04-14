@@ -5,6 +5,7 @@
 #include "Ast.hpp"
 #include "Tokeniser.hpp"
 
+
 class ParseContext;
 
 class Parser
@@ -19,16 +20,22 @@ private:
 
   Root* parseRoot(ParseContext& ctx);
   FuncList* parseFuncList(ParseContext& ctx);
+  void parseFuncListP(FuncList* funcList, ParseContext& ctx);
   Func* parseFunc(ParseContext& ctx);
-  ArgList* parseArgList(ParseContext& ctx);
-  Arg* parseArg(ParseContext& ctx);
-  StatementList* parseStatementList(ParseContext& ctx);
+  void parseFuncP(Func* func, ParseContext& ctx);
+  Block* parseBlock(ParseContext& ctx);
+  void parseStatementList(Block* block, ParseContext& ctx);
+  void parseStatementListP(Block* block, ParseContext& ctx);
   Statement* parseStatement(ParseContext& ctx);
-  Expression *parseExpression(ParseContext& ctx);
-  Type *parseType(ParseContext& ctx);
-  Id *parseId(ParseContext& ctx);
-
-  Type* getExpressionType(const Expression* expression);
+  void parseStatementP(Id* id, Statement* statement, ParseContext& ctx);
+  Type* parseType(ParseContext& ctx, Id* fromId = nullptr);
+  ArgList* parseArgList(ParseContext& ctx);
+  void parseArgListP(ArgList* argList, ParseContext& ctx);
+  Arg* parseArg(ParseContext& ctx);
+  Expression* parseExpression(ParseContext& ctx);
+  Expression* parseExpressionP(Expression* partial, ParseContext& ctx);
+  void parseExpressionPP(Expression* partial, Expression* target, ParseContext& ctx);
+  Id* parseId(ParseContext& ctx);
 
 private:
   using Node = std::variant<
