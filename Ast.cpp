@@ -77,8 +77,8 @@ void dumpJson(const Expression* node, std::string& str, int32_t tabIndex)
     dumpJson(std::get<Id*>(*node), str, tabIndex);
   else if (std::holds_alternative<int32_t>(*node))
     dumpJson(std::get<int32_t>(*node), str, tabIndex);
-  else if (std::holds_alternative<CompareEqual*>(*node))
-    dumpJson(std::get<CompareEqual*>(*node), str, tabIndex);
+  else if (std::holds_alternative<Op*>(*node))
+    dumpJson(std::get<Op*>(*node), str, tabIndex);
   else
     message_and_abort("empty expression");
 }
@@ -172,7 +172,17 @@ void dumpJson(const Type* node, std::string& str, int32_t tabIndex)
   dumpJson({{"nodeType", "Type"}, {"name", node->name}}, str, tabIndex);
 }
 
-void dumpJson(const CompareEqual* node, std::string& str, int32_t tabIndex)
+void dumpJson(const Op* node, std::string& str, int32_t tabIndex)
 {
-  dumpJson({{"nodeType", "CompareEqual"}, {"left", node->left}, {"right", node->right}}, str, tabIndex);
+  std::string op;
+  switch (node->type)
+  {
+    case Op::Type::CompareEqual:
+      op = "CompareEqual";
+      break;
+    case Op::Type::LogicalAnd:
+      op = "LogicalAnd";
+      break;
+  }
+  dumpJson({{"nodeType", "Op" + op}, {"left", node->left}, {"right", node->right}}, str, tabIndex);
 }

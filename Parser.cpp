@@ -244,7 +244,7 @@ void Parser::parseStatementP(Id* id, Statement* statement, ParseContext& ctx)
 
     *statement = variableDeclaration;
   }
-  else if (ctx.peekCheck(TT::CompareEqual) || ctx.peekCheck(TT::Assign))
+  else if (ctx.peekCheck(TT::CompareEqual) || ctx.peekCheck(TT::LogicalAnd) || ctx.peekCheck(TT::Assign))
   {
     Assignment* assignment = makeNode<Assignment>();
     Expression* partial = makeNode<Expression>();
@@ -286,9 +286,21 @@ Expression* Parser::parseExpressionP(Expression* partial, ParseContext& ctx)
   {
     ctx.pop();
     Expression* expression = makeNode<Expression>();
-    CompareEqual* compareEqual = makeNode<CompareEqual>();
+    Op* compareEqual = makeNode<Op>();
     compareEqual->left = partial;
     compareEqual->right = parseExpression(ctx);
+    compareEqual->type = Op::Type::CompareEqual;
+    *expression = compareEqual;
+    return expression;
+  }
+  else if (ctx.peekCheck(TT::LogicalAnd))
+  {
+    ctx.pop();
+    Expression* expression = makeNode<Expression>();
+    Op* compareEqual = makeNode<Op>();
+    compareEqual->left = partial;
+    compareEqual->right = parseExpression(ctx);
+    compareEqual->type = Op::Type::LogicalAnd;
     *expression = compareEqual;
     return expression;
   }

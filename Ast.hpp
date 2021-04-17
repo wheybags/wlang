@@ -16,14 +16,14 @@ struct Type;
 struct ArgList;
 struct Arg;
 struct Id;
-struct CompareEqual;
+struct Op;
 
 struct Scope;
 
 using Expression = std::variant<std::monostate,
   Id*,
   int32_t,
-  CompareEqual*
+  Op*
 >;
 
 using Statement = std::variant<std::monostate,
@@ -96,10 +96,17 @@ struct Type
   std::string name;
 };
 
-struct CompareEqual
+struct Op
 {
+  enum class Type
+  {
+    CompareEqual,
+    LogicalAnd,
+  };
+
   Expression* left = nullptr;
   Expression* right = nullptr;
+  Type type;
 };
 
 struct Scope
@@ -122,7 +129,7 @@ struct Scope
   X(Arg) \
   X(Expression) \
   X(Id) \
-  X(CompareEqual)
+  X(Op)
 
 # define X(Type) void dumpJson(const Type* node, std::string& str, int32_t tabIndex = 0);
 FOR_EACH_AST_TYPE

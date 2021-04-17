@@ -18,7 +18,7 @@ grammar = """
   //                    Decl  Assign 
   Statement'          = $Id | Expression' "=" Expression 
   Expression          = $Id Expression' | $Int32 Expression'
-  Expression'         = "==" Expression | Nil
+  Expression'         = "==" Expression | "&&" Expression | Nil
   Type                = $Id
   ArgList             = Arg ArgList'
   ArgList'            = "," ArgList | Nil

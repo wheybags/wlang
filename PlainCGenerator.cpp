@@ -107,12 +107,22 @@ void PlainCGenerator::generate(const Expression* node, std::string& str)
   {
     str += std::to_string(std::get<int32_t>(*node));
   }
-  else if (std::holds_alternative<CompareEqual*>(*node))
+  else if (std::holds_alternative<Op*>(*node))
   {
-    const CompareEqual* compareNode = std::get<CompareEqual*>(*node);
+    const Op* compareNode = std::get<Op*>(*node);
+    str += "(";
     generate(compareNode->left, str);
-    str += " == ";
+    switch (compareNode->type)
+    {
+      case Op::Type::CompareEqual:
+        str += " == ";
+        break;
+      case Op::Type::LogicalAnd:
+        str += " && ";
+        break;
+    }
     generate(compareNode->right, str);
+    str += ")";
   }
   else
   {

@@ -8,9 +8,9 @@ Firsts:
     StatementList  = "return" $Id
     StatementList' = "return" $Id | Nil
     Statement      = "return" | $Id
-    Statement'     = $Id | "==" Nil "="
+    Statement'     = $Id | "==" "&&" Nil "="
     Expression     = $Id | $Int32
-    Expression'    = "==" | Nil
+    Expression'    = "==" | "&&" | Nil
     Type           = $Id
     ArgList        = $Id
     ArgList'       = "," | Nil

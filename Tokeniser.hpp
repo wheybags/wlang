@@ -15,6 +15,7 @@ struct Token
     OpenBrace,
     CloseBrace,
     CompareEqual,
+    LogicalAnd,
     Return,
     Semicolon,
     Assign,
