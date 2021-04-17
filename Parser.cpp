@@ -214,7 +214,11 @@ Statement* Parser::parseStatement(ParseContext& ctx)
   {
     ctx.pop();
     ReturnStatement* returnStatement = makeNode<ReturnStatement>();
-    returnStatement->retval = parseExpression(ctx);
+
+    IntermediateExpression intermediate;
+    parseExpression(intermediate, ctx);
+    returnStatement->retval = resolveIntermediateExpression(std::move(intermediate));
+
     *statement = returnStatement;
   }
   else if(ctx.peekCheck(TT::Id))
@@ -247,11 +251,20 @@ void Parser::parseStatementP(Id* id, Statement* statement, ParseContext& ctx)
   else if (ctx.peekCheck(TT::CompareEqual) || ctx.peekCheck(TT::LogicalAnd) || ctx.peekCheck(TT::Assign))
   {
     Assignment* assignment = makeNode<Assignment>();
-    Expression* partial = makeNode<Expression>();
-    *partial = id;
-    assignment->left = parseExpressionP(partial, ctx);
+    {
+      Expression* partial = makeNode<Expression>();
+      *partial = id;
+      IntermediateExpression intermediate;
+      intermediate.push_back(partial);
+      parseExpressionP(intermediate, ctx);
+      assignment->left = resolveIntermediateExpression(std::move(intermediate));
+    }
     release_assert(ctx.popCheck(TT::Assign));
-    assignment->right = parseExpression(ctx);
+    {
+      IntermediateExpression intermediate;
+      parseExpression(intermediate, ctx);
+      assignment->right = resolveIntermediateExpression(std::move(intermediate));
+    }
     *statement = assignment;
   }
   else
@@ -260,19 +273,47 @@ void Parser::parseStatementP(Id* id, Statement* statement, ParseContext& ctx)
   }
 }
 
-Expression* Parser::parseExpression(ParseContext& ctx)
+Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& intermediate)
 {
-  Expression* expression = makeNode<Expression>();
+  for (Op::Type op = (Op::Type)0; op != Op::Type::ENUM_END; op = (Op::Type)(int32_t(op) + 1))
+  {
+    for (int32_t i = 1; i < int32_t(intermediate.size()); i += 2)
+    {
+      if (op == std::get<Op::Type>(intermediate[i]))
+      {
+        Op* opNode = makeNode<Op>();
+        opNode->left = std::get<Expression*>(intermediate[i-1]);
+        opNode->right = std::get<Expression*>(intermediate[i+1]);
+        opNode->type = op;
+        Expression* expression = makeNode<Expression>();
+        *expression = opNode;
 
+        intermediate.erase(intermediate.begin() + (i), intermediate.begin() + (i+2));
+        intermediate[i-1] = expression;
+        i -= 2;
+      }
+    }
+  }
+
+  debug_assert(intermediate.size() == 1);
+  return std::get<Expression*>(intermediate[0]);
+}
+
+void Parser::parseExpression(IntermediateExpression& result, ParseContext& ctx)
+{
   if (ctx.peekCheck(TT::Id))
   {
+    Expression* expression = makeNode<Expression>();
     *expression = parseId(ctx);
-    return parseExpressionP(expression, ctx);
+    result.push_back(expression);
+    parseExpressionP(result, ctx);
   }
   else if (ctx.peekCheck(TT::Int32))
   {
+    Expression* expression = makeNode<Expression>();
     *expression = ctx.pop().i32Value;
-    return parseExpressionP(expression, ctx);
+    result.push_back(expression);
+    parseExpressionP(result, ctx);
   }
   else
   {
@@ -280,35 +321,24 @@ Expression* Parser::parseExpression(ParseContext& ctx)
   }
 }
 
-Expression* Parser::parseExpressionP(Expression* partial, ParseContext& ctx)
+void Parser::parseExpressionP(IntermediateExpression& result, ParseContext& ctx)
 {
   if (ctx.peekCheck(TT::CompareEqual))
   {
     ctx.pop();
-    Expression* expression = makeNode<Expression>();
-    Op* compareEqual = makeNode<Op>();
-    compareEqual->left = partial;
-    compareEqual->right = parseExpression(ctx);
-    compareEqual->type = Op::Type::CompareEqual;
-    *expression = compareEqual;
-    return expression;
+    result.push_back(Op::Type::CompareEqual);
+    parseExpression(result, ctx);
   }
   else if (ctx.peekCheck(TT::LogicalAnd))
   {
     ctx.pop();
-    Expression* expression = makeNode<Expression>();
-    Op* compareEqual = makeNode<Op>();
-    compareEqual->left = partial;
-    compareEqual->right = parseExpression(ctx);
-    compareEqual->type = Op::Type::LogicalAnd;
-    *expression = compareEqual;
-    return expression;
+    result.push_back(Op::Type::LogicalAnd);
+    parseExpression(result, ctx);
   }
   else
   {
     // Nil
     release_assert(ExpressionPFollow.count(ctx.peek().type));
-    return partial;
   }
 }
 

@@ -102,6 +102,8 @@ struct Op
   {
     CompareEqual,
     LogicalAnd,
+
+    ENUM_END
   };
 
   Expression* left = nullptr;

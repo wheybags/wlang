@@ -32,8 +32,13 @@ private:
   ArgList* parseArgList(ParseContext& ctx);
   void parseArgListP(ArgList* argList, ParseContext& ctx);
   Arg* parseArg(ParseContext& ctx);
-  Expression* parseExpression(ParseContext& ctx);
-  Expression* parseExpressionP(Expression* partial, ParseContext& ctx);
+
+  using IntermediateExpressionItem = std::variant<Expression*, Op::Type>;
+  using IntermediateExpression = std::vector<IntermediateExpressionItem>;
+  Expression* resolveIntermediateExpression(IntermediateExpression&& intermediate);
+
+  void parseExpression(IntermediateExpression& result, ParseContext& ctx);
+  void parseExpressionP(IntermediateExpression& result, ParseContext& ctx);
   Id* parseId(ParseContext& ctx);
 
 private:

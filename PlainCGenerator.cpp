@@ -120,6 +120,8 @@ void PlainCGenerator::generate(const Expression* node, std::string& str)
       case Op::Type::LogicalAnd:
         str += " && ";
         break;
+      case Op::Type::ENUM_END:
+        message_and_abort("bad enum");
     }
     generate(compareNode->right, str);
     str += ")";
