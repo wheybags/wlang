@@ -11,7 +11,6 @@ Firsts:
     Statement'     = $Id | "==" Nil "="
     Expression     = $Id | $Int32
     Expression'    = "==" | Nil
-    Expression''   = "=="
     Type           = $Id
     ArgList        = $Id
     ArgList'       = "," | Nil
@@ -21,17 +20,16 @@ Follows:
     Root           =
     FuncList       = $End
     FuncList'      = $End
-    Func           = $Id $End
-    Func'          = $Id $End
-    Block          = $Id $End
+    Func           = $End $Id
+    Func'          = $End $Id
+    Block          = $End $Id
     StatementList  = "}"
     StatementList' = "}"
     Statement      = ";"
     Statement'     = ";"
     Expression     = ";" "="
     Expression'    = ";" "="
-    Expression''   = ";" "="
     Type           = $Id
     ArgList        = ")"
     ArgList'       = ")"
-    Arg            = "," ")"
+    Arg            = ")" ","

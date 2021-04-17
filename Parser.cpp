@@ -284,8 +284,12 @@ Expression* Parser::parseExpressionP(Expression* partial, ParseContext& ctx)
 {
   if (ctx.peekCheck(TT::CompareEqual))
   {
+    ctx.pop();
     Expression* expression = makeNode<Expression>();
-    parseExpressionPP(partial, expression, ctx);
+    CompareEqual* compareEqual = makeNode<CompareEqual>();
+    compareEqual->left = partial;
+    compareEqual->right = parseExpression(ctx);
+    *expression = compareEqual;
     return expression;
   }
   else
@@ -294,15 +298,6 @@ Expression* Parser::parseExpressionP(Expression* partial, ParseContext& ctx)
     release_assert(ExpressionPFollow.count(ctx.peek().type));
     return partial;
   }
-}
-
-void Parser::parseExpressionPP(Expression* partial, Expression* target, ParseContext& ctx)
-{
-  release_assert(ctx.popCheck(TT::CompareEqual));
-  CompareEqual* compareEqual = makeNode<CompareEqual>();
-  compareEqual->left = partial;
-  compareEqual->right = parseExpression(ctx);
-  *target = compareEqual;
 }
 
 Type* Parser::parseType(ParseContext& ctx, Id* fromId)

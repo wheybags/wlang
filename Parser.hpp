@@ -34,7 +34,6 @@ private:
   Arg* parseArg(ParseContext& ctx);
   Expression* parseExpression(ParseContext& ctx);
   Expression* parseExpressionP(Expression* partial, ParseContext& ctx);
-  void parseExpressionPP(Expression* partial, Expression* target, ParseContext& ctx);
   Id* parseId(ParseContext& ctx);
 
 private:

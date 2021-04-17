@@ -18,8 +18,7 @@ grammar = """
   //                    Decl  Assign 
   Statement'          = $Id | Expression' "=" Expression 
   Expression          = $Id Expression' | $Int32 Expression'
-  Expression'         = Expression'' | Nil
-  Expression''        = "==" Expression
+  Expression'         = "==" Expression | Nil
   Type                = $Id
   ArgList             = Arg ArgList'
   ArgList'            = "," ArgList | Nil
@@ -218,7 +217,7 @@ class Grammar:
 
     def str_follow(self, name: str) -> str:
         strs = [f"{name} {self._pad(name)}="]
-        for item in self.follow(name):
+        for item in sorted(list(self.follow(name))):
             strs.append(item)
         return " ".join(strs)
 
