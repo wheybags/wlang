@@ -22,9 +22,9 @@ struct Token
     End
   };
 
-  Type type;
-  std::string idValue;
-  int32_t i32Value;
+  Type type = {};
+  std::string idValue = {};
+  int32_t i32Value = {};
 };
 
 using TT = Token::Type;

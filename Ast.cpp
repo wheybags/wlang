@@ -183,6 +183,8 @@ void dumpJson(const Op* node, std::string& str, int32_t tabIndex)
     case Op::Type::LogicalAnd:
       op = "LogicalAnd";
       break;
+    case Op::Type::ENUM_END:
+      release_assert(false);
   }
   dumpJson({{"nodeType", "Op" + op}, {"left", node->left}, {"right", node->right}}, str, tabIndex);
 }
