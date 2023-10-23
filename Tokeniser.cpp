@@ -2,6 +2,7 @@
 #include "StringUtil.hpp"
 #include "Assert.hpp"
 #include <map>
+#include <optional>
 
 const std::vector<std::pair<std::string_view, Token::Type>> keywords
 {

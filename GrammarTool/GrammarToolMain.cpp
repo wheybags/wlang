@@ -1,9 +1,11 @@
-#include "unordered_map"
-#include "unordered_set"
-#include "string"
-#include "vector"
-#include "sstream"
-#include "variant"
+#include <unordered_map>
+#include <unordered_set>
+#include <string>
+#include <vector>
+#include <sstream>
+#include <variant>
+#include <functional>
+#include <algorithm>
 #include "../Assert.hpp"
 
 
