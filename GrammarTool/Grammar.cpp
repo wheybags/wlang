@@ -1,7 +1,6 @@
 #include <functional>
 #include <sstream>
 #include "Grammar.hpp"
-#include "../Assert.hpp"
 
 
 // Man, I forgot a lot of my compiler design theory since college...

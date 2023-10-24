@@ -26,7 +26,6 @@ struct ProductionItem
   bool operator==(const NonTerminal& nonTerminal) const { return isNonTerminal() && this->_nonTerminal == &nonTerminal; }
   bool operator!=(const NonTerminal& nonTerminal) const { return !(*this == nonTerminal); }
 
-
   bool isStr() const { return !_nonTerminal; }
   bool isNonTerminal() const { return _nonTerminal; }
 
@@ -58,7 +57,7 @@ public:
   std::unordered_set<std::string> follow(const std::string& _name) const;
 
   const std::unordered_map<std::string, NonTerminal>& getRules() const { return rules; }
-  const std::vector<std::string>& getKeys() { return keys; }
+  const std::vector<std::string>& getKeys() const { return keys; }
 
 private:
   std::unordered_map<std::string, NonTerminal> rules;
