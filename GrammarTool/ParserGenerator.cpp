@@ -27,6 +27,57 @@ std::string generateParser(const Grammar& grammar)
       tabIndex += tabDelta;
   };
 
+  auto handleSourceInsert = [&](const std::string& sourceInsert)
+  {
+    int32_t xStart = 0;
+    {
+      for (int32_t i = 0; i < int32_t(sourceInsert.size()); i++)
+      {
+        if (sourceInsert[i] == '\n')
+        {
+          xStart = 0;
+          continue;
+        }
+
+        if (!Str::isSpace(sourceInsert[i]))
+          break;
+        xStart++;
+      }
+    }
+
+    int32_t linesSent = 0;
+
+    std::string line;
+    bool allSpace = true;
+    int32_t charsOnLine = 0;
+
+    for (char c : sourceInsert)
+    {
+      if (c == '\n')
+      {
+        if (linesSent > 0 || !allSpace)
+          appendSourceLine(line);
+
+        linesSent++;
+        line.clear();
+        allSpace = true;
+        charsOnLine = 0;
+        continue;
+      }
+
+      if (!Str::isSpace(c))
+        allSpace = false;
+
+      if (charsOnLine >= xStart || !Str::isSpace(c))
+        line += c;
+
+      charsOnLine++;
+    }
+
+    if (!line.empty() && allSpace)
+      appendSourceLine(line);
+  };
+
   std::unordered_map<std::string, std::string> tokenTypeMapping
   {
     {"$Id", "Id"},
@@ -97,57 +148,6 @@ std::string generateParser(const Grammar& grammar)
         appendSourceLine("{");
       }
 
-      auto handleSourceInsert = [&](const std::string& sourceInsert)
-      {
-        int32_t xStart = 0;
-        {
-          for (int32_t i = 0; i < int32_t(sourceInsert.size()); i++)
-          {
-            if (sourceInsert[i] == '\n')
-            {
-              xStart = 0;
-              continue;
-            }
-
-            if (!Str::isSpace(sourceInsert[i]))
-              break;
-            xStart++;
-          }
-        }
-
-        int32_t linesSent = 0;
-
-        std::string line;
-        bool allSpace = true;
-        int32_t charsOnLine = 0;
-
-        for (char c : sourceInsert)
-        {
-          if (c == '\n')
-          {
-            if (linesSent > 0 || !allSpace)
-              appendSourceLine(line);
-
-            linesSent++;
-            line.clear();
-            allSpace = true;
-            charsOnLine = 0;
-            continue;
-          }
-
-          if (!Str::isSpace(c))
-            allSpace = false;
-
-          if (charsOnLine >= xStart || !Str::isSpace(c))
-            line += c;
-
-          charsOnLine++;
-        }
-
-        if (!line.empty() && allSpace)
-          appendSourceLine(line);
-      };
-
       int32_t nonTerminalIndex = 0;
       for (int32_t productionIndex = 0; productionIndex < int32_t(production.size()); productionIndex++)
       {
@@ -192,6 +192,12 @@ std::string generateParser(const Grammar& grammar)
 
       if (!onlyOne)
         appendSourceLine("}");
+    }
+
+    if (!rule.codeInsertAfter.empty())
+    {
+      appendSourceLine("");
+      handleSourceInsert(rule.codeInsertAfter);
     }
 
     if (grammar.can_be_nil(name))

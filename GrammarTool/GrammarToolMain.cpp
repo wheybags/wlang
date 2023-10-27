@@ -14,7 +14,9 @@ const char* wlangGrammarStr = R"STR(
                           rootNode->rootScope = makeNode<Scope>();
                           ctx.pushScope(rootNode->rootScope);
                           rootNode->funcList = makeNode<FuncList>();
-                        }} FuncList $End;
+                        }} FuncList $End; {{
+                          return rootNode;
+                        }}
 
   FuncList<std::vector<Func*>>            = Func FuncList';
   FuncList'           = FuncList | Nil;

@@ -197,6 +197,25 @@ void testCodeInsert()
     release_assert(rules.getRules().at("FuncList").productions[0][1].codeInsertAfter == "test code;");
   }
 
+  {
+    Grammar rules(R"STR(
+      A = "A" | "B" B; {{test code;}}
+      B = Nil;
+    )STR");
+
+    release_assert(rules.getRules().at("A").codeInsertAfter == "test code;");
+    release_assert(rules.getRules().at("B").codeInsertAfter.empty());
+  }
+
+  {
+    Grammar rules(R"STR(
+      A = "A" | "B" B;
+      B = Nil; {{test code;}}
+    )STR");
+
+    release_assert(rules.getRules().at("A").codeInsertAfter.empty());
+    release_assert(rules.getRules().at("B").codeInsertAfter == "test code;");
+  }
 }
 
 void test()

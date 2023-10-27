@@ -177,6 +177,17 @@ static GrammarResult make_grammar(const std::string& str_table)
     {
       if (i == ruleStartIndex)
       {
+        if (tokens[i].starts_with("{{"))
+        {
+          release_assert(tokens[i].ends_with("}}"));
+          release_assert(!currentRuleName.empty());
+          rules.rules.at(currentRuleName).codeInsertAfter = tokens[i].substr(2, tokens[i].length()-4);
+
+          if (i+1 >= int32_t(tokens.size()))
+            break;
+          i++;
+        }
+
         release_assert(tokens[i] != ";");
         release_assert((i < int32_t(tokens.size()) - 1 && tokens[i+1] == "=") ||
                        (i < int32_t(tokens.size()) - 2 && tokens[i+1][0] == '<' && tokens[i+2] == "="));

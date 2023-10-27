@@ -54,6 +54,7 @@ struct NonTerminal
 {
   std::string name;
   std::string returnType;
+  std::string codeInsertAfter;
   std::vector<Production> productions;
 };
 
