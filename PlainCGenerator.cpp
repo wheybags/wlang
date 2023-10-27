@@ -28,11 +28,8 @@ void PlainCGenerator::generate(const Root* node, int32_t tabIndex)
 
 void PlainCGenerator::generate(const FuncList* node, int32_t tabIndex)
 {
-  while (node)
-  {
-    generate(node->func, tabIndex);
-    node = node->next;
-  }
+  for (Func* func : node->functions)
+    generate(func, tabIndex);
 }
 
 void PlainCGenerator::generate(const Func* node, int32_t tabIndex)

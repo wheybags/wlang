@@ -44,6 +44,7 @@ std::string dumpProduction(const Production& production);
 struct NonTerminal
 {
   std::string name;
+  std::string returnType;
   std::vector<Production> productions;
 };
 

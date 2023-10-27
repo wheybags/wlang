@@ -39,8 +39,7 @@ struct Root
 
 struct FuncList
 {
-  Func* func = nullptr;
-  FuncList* next = nullptr;
+  std::vector<Func*> functions;
 };
 
 struct Func

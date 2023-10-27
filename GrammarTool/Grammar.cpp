@@ -13,6 +13,7 @@ static std::vector<std::string> tokenise(std::string_view input)
   std::vector<std::string> tokens;
 
   bool inQuotedString = false;
+  int32_t angleBracketDepth = 0;
   bool inComment = false;
   std::string accumulator;
 
@@ -48,7 +49,7 @@ static std::vector<std::string> tokenise(std::string_view input)
       continue;
     }
 
-    if (!inQuotedString && !inComment)
+    if (!inQuotedString && !inComment && angleBracketDepth == 0)
     {
       if (input[0] == '|' || input[0] == '=' || input[0] == ';')
       {
@@ -63,6 +64,15 @@ static std::vector<std::string> tokenise(std::string_view input)
       {
         advance(2);
         inComment = true;
+        continue;
+      }
+
+      if (input[0] == '<')
+      {
+        breakToken();
+        advance(1);
+        angleBracketDepth = 1;
+        accumulator.push_back('<');
         continue;
       }
     }
@@ -82,6 +92,26 @@ static std::vector<std::string> tokenise(std::string_view input)
       accumulator.push_back('"');
       breakToken();
       continue;
+    }
+
+    if (angleBracketDepth)
+    {
+      if (input[0] == '>')
+      {
+        angleBracketDepth--;
+
+        if (angleBracketDepth == 0)
+        {
+          advance(1);
+          accumulator.push_back('>');
+          breakToken();
+          continue;
+        }
+      }
+      else if (input[0] == '<')
+      {
+        angleBracketDepth++;
+      }
     }
 
     accumulator.push_back(input[0]);
@@ -105,21 +135,28 @@ static GrammarResult make_grammar(const std::string& str_table)
   {
     std::vector<std::string> tokens = tokenise(str_table);
 
+    int32_t ruleStartIndex = 0;
     std::string currentRuleName;
     std::vector<std::string> accumulator;
-    bool atRuleStart = true;
 
     for (int32_t i = 0; i < int32_t(tokens.size()); i++)
     {
-      if (atRuleStart)
+      if (i == ruleStartIndex)
       {
         release_assert(tokens[i] != ";");
-        release_assert(i < int32_t(tokens.size()) - 1 && tokens[i+1] == "=");
+        release_assert((i < int32_t(tokens.size()) - 1 && tokens[i+1] == "=") ||
+                       (i < int32_t(tokens.size()) - 2 && tokens[i+1][0] == '<' && tokens[i+2] == "="));
         rules.rules[tokens[i]] = NonTerminal { .name = tokens[i] };
         rules.keys.emplace_back(tokens[i]);
         currentRuleName = tokens[i];
-        atRuleStart = false;
-        i++;
+        ruleStartIndex = i;
+        continue;
+      }
+
+      if (tokens[i] == "=")
+      {
+        release_assert((i == ruleStartIndex + 1) ||
+                       (i == ruleStartIndex + 2 && tokens[i-1][0] == '<'));
         continue;
       }
 
@@ -128,7 +165,7 @@ static GrammarResult make_grammar(const std::string& str_table)
         if (!accumulator.empty())
           rules_temp[currentRuleName].emplace_back(std::move(accumulator));
         accumulator.clear();
-        atRuleStart = true;
+        ruleStartIndex = i + 1;
         continue;
       }
 
@@ -137,6 +174,14 @@ static GrammarResult make_grammar(const std::string& str_table)
         if (!accumulator.empty())
           rules_temp[currentRuleName].emplace_back(std::move(accumulator));
         accumulator.clear();
+        continue;
+      }
+
+      if (tokens[i].starts_with("<"))
+      {
+        release_assert(tokens[i][tokens[i].length()-1] == '>');
+        release_assert(i == ruleStartIndex + 1);
+        rules.rules[currentRuleName].returnType = tokens[i].substr(1, tokens[i].length()-2);
         continue;
       }
 

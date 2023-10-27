@@ -75,204 +75,6 @@ Parser::Parser()
   }
 }
 
-const Root* Parser::parse(const std::vector<Token>& tokenStrings)
-{
-  ParseContext tokens(tokenStrings.data(), tokenStrings.size());
-  return parseRoot(tokens);
-}
-
-template<typename T> T* Parser::makeNode()
-{
-  constexpr size_t blockSize = 256;
-  if (nodeBlocks.empty() || nodeBlocks.back().size() == blockSize)
-  {
-    nodeBlocks.resize(nodeBlocks.size() + 1);
-    nodeBlocks.back().reserve(blockSize);
-  }
-
-  NodeBlock& currentBlock = nodeBlocks.back();
-  Node& node = currentBlock.emplace_back(T());
-  return &std::get<T>(node);
-}
-
-Root* Parser::parseRoot(ParseContext& ctx)
-{
-  Root* rootNode = makeNode<Root>();
-  rootNode->rootScope = makeNode<Scope>();
-  ctx.pushScope(rootNode->rootScope);
-
-  rootNode->funcList = parseFuncList(ctx);
-  release_assert(ctx.popCheck(TT::End));
-  return rootNode;
-}
-
-
-FuncList* Parser::parseFuncList(ParseContext& ctx)
-{
-  FuncList* funcList = makeNode<FuncList>();
-  funcList->func = parseFunc(ctx);
-  parseFuncListP(funcList, ctx);
-
-  return funcList;
-}
-
-void Parser::parseFuncListP(FuncList* list, ParseContext& ctx)
-{
-  if (ctx.peekCheck(TT::Id))
-  {
-    list->next = parseFuncList(ctx);
-  }
-  else
-  {
-    // Nil
-    release_assert(FuncListPFollow.count(ctx.peek().type));
-  }
-}
-
-Func* Parser::parseFunc(ParseContext& ctx)
-{
-  Func* func = makeNode<Func>();
-  func->returnType = parseType(ctx);
-  func->name = parseId(ctx);
-  release_assert(ctx.popCheck(TT::OpenBracket));
-  parseFuncP(func, ctx);
-  return func;
-}
-
-void Parser::parseFuncP(Func* func, ParseContext& ctx)
-{
-  if (ctx.peekCheck(TT::Id))
-    func->argList = parseArgList(ctx);
-
-  release_assert(ctx.popCheck(TT::CloseBracket));
-  func->funcBody = parseBlock(ctx);
-}
-
-ArgList* Parser::parseArgList(ParseContext& ctx)
-{
-  ArgList* argList = makeNode<ArgList>();
-  argList->arg = parseArg(ctx);
-  parseArgListP(argList, ctx);
-  return argList;
-}
-
-void Parser::parseArgListP(ArgList* argList, ParseContext& ctx)
-{
-  if (ctx.peekCheck(TT::Comma))
-  {
-    ctx.pop();
-    argList->next = parseArgList(ctx);
-  }
-  else
-  {
-    // Nil
-    release_assert(ArgListPFollow.count(ctx.peek().type));
-  }
-}
-
-Arg* Parser::parseArg(ParseContext& ctx)
-{
-  Arg *arg = makeNode<Arg>();
-  arg->type = parseType(ctx);
-  arg->name = parseId(ctx);
-  return arg;
-}
-
-Block* Parser::parseBlock(ParseContext& ctx)
-{
-  Block* block = makeNode<Block>();
-  release_assert(ctx.popCheck(TT::OpenBrace));
-  parseStatementList(block, ctx);
-  release_assert(ctx.popCheck(TT::CloseBrace));
-  return block;
-}
-
-void Parser::parseStatementList(Block* block, ParseContext& ctx)
-{
-  block->statements.push_back(parseStatement(ctx));
-  release_assert(ctx.popCheck(TT::Semicolon));
-  parseStatementListP(block, ctx);
-}
-
-void Parser::parseStatementListP(Block* block, ParseContext& ctx)
-{
-  if (ctx.peekCheck(TT::Return) || ctx.peekCheck(TT::Id))
-  {
-    parseStatementList(block, ctx);
-  }
-  else
-  {
-    // Nil
-    release_assert(StatementListPFollow.count(ctx.peek().type));
-  }
-}
-
-Statement* Parser::parseStatement(ParseContext& ctx)
-{
-  Statement* statement = makeNode<Statement>();
-  if (ctx.peekCheck(TT::Return))
-  {
-    ctx.pop();
-    ReturnStatement* returnStatement = makeNode<ReturnStatement>();
-
-    IntermediateExpression intermediate;
-    parseExpression(intermediate, ctx);
-    returnStatement->retval = resolveIntermediateExpression(std::move(intermediate));
-
-    *statement = returnStatement;
-  }
-  else if(ctx.peekCheck(TT::Id))
-  {
-    Id* id = parseId(ctx);
-    parseStatementP(id, statement, ctx);
-  }
-  else
-  {
-
-  }
-
-  return statement;
-}
-
-void Parser::parseStatementP(Id* id, Statement* statement, ParseContext& ctx)
-{
-  if (ctx.peekCheck(TT::Id))
-  {
-    VariableDeclaration* variableDeclaration = makeNode<VariableDeclaration>();
-    variableDeclaration->type = parseType(ctx, id);
-    variableDeclaration->name = parseId(ctx);
-
-//    auto it = ctx.getScope()->variables.find(variableDeclaration->name->name);
-//    release_assert(it == ctx.getScope()->variables.end());
-//    ctx.getScope()->variables.emplace_hint(it, variableDeclaration->name->name, variableDeclaration);
-
-    *statement = variableDeclaration;
-  }
-  else if (ctx.peekCheck(TT::CompareEqual) || ctx.peekCheck(TT::LogicalAnd) || ctx.peekCheck(TT::Assign))
-  {
-    Assignment* assignment = makeNode<Assignment>();
-    {
-      Expression* partial = makeNode<Expression>();
-      *partial = id;
-      IntermediateExpression intermediate;
-      intermediate.push_back(partial);
-      parseExpressionP(intermediate, ctx);
-      assignment->left = resolveIntermediateExpression(std::move(intermediate));
-    }
-    release_assert(ctx.popCheck(TT::Assign));
-    {
-      IntermediateExpression intermediate;
-      parseExpression(intermediate, ctx);
-      assignment->right = resolveIntermediateExpression(std::move(intermediate));
-    }
-    *statement = assignment;
-  }
-  else
-  {
-    message_and_abort("bad statement");
-  }
-}
-
 Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& intermediate)
 {
   for (Op::Type op = (Op::Type)0; op != Op::Type::ENUM_END; op = (Op::Type)(int32_t(op) + 1))
@@ -299,77 +101,24 @@ Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& inter
   return std::get<Expression*>(intermediate[0]);
 }
 
-void Parser::parseExpression(IntermediateExpression& result, ParseContext& ctx)
+const Root* Parser::parse(const std::vector<Token>& tokenStrings)
 {
-  if (ctx.peekCheck(TT::Id))
-  {
-    Expression* expression = makeNode<Expression>();
-    *expression = parseId(ctx);
-    result.push_back(expression);
-    parseExpressionP(result, ctx);
-  }
-  else if (ctx.peekCheck(TT::Int32))
-  {
-    Expression* expression = makeNode<Expression>();
-    *expression = ctx.pop().i32Value;
-    result.push_back(expression);
-    parseExpressionP(result, ctx);
-  }
-  else
-  {
-    message_and_abort("bad expression");
-  }
+  ParseContext tokens(tokenStrings.data(), tokenStrings.size());
+  return parseRoot(tokens);
 }
 
-void Parser::parseExpressionP(IntermediateExpression& result, ParseContext& ctx)
+template<typename T> T* Parser::makeNode()
 {
-  if (ctx.peekCheck(TT::CompareEqual))
+  constexpr size_t blockSize = 256;
+  if (nodeBlocks.empty() || nodeBlocks.back().size() == blockSize)
   {
-    ctx.pop();
-    result.push_back(Op::Type::CompareEqual);
-    parseExpression(result, ctx);
-  }
-  else if (ctx.peekCheck(TT::LogicalAnd))
-  {
-    ctx.pop();
-    result.push_back(Op::Type::LogicalAnd);
-    parseExpression(result, ctx);
-  }
-  else
-  {
-    // Nil
-    release_assert(ExpressionPFollow.count(ctx.peek().type));
-  }
-}
-
-Type* Parser::parseType(ParseContext& ctx, Id* fromId)
-{
-  const std::string* typeName = nullptr;
-
-  if (fromId)
-  {
-    typeName = &fromId->name;
-  }
-  else
-  {
-    const Token& typeToken = ctx.pop();
-    release_assert(typeToken.type == Token::Type::Id);
-    typeName = &typeToken.idValue;
+    nodeBlocks.resize(nodeBlocks.size() + 1);
+    nodeBlocks.back().reserve(blockSize);
   }
 
-  auto it = types.find(*typeName);
-
-  if (it == types.end())
-  {
-    Type* type = makeNode<Type>();
-    type->name = *typeName;
-    types.emplace_hint(it, *typeName, type);
-    return type;
-  }
-  else
-  {
-    return it->second;
-  }
+  NodeBlock& currentBlock = nodeBlocks.back();
+  Node& node = currentBlock.emplace_back(T());
+  return &std::get<T>(node);
 }
 
 Id* Parser::parseId(ParseContext& ctx)
@@ -379,3 +128,5 @@ Id* Parser::parseId(ParseContext& ctx)
   id->name = ctx.pop().idValue;
   return id;
 }
+
+#include "ParserRules.inl"

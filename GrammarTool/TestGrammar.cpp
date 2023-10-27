@@ -130,8 +130,21 @@ void test_follow()
   release_assert((rules.follow("C") == ss{"\"4\"", "$End"}));
 }
 
+void testReturnType()
+{
+  Grammar rules(R"STR(
+    Root<R*> = "3" Y $End;
+    Y<std::vector<something>> = A | "1";
+    A = "2" | Nil;
+  )STR");
+
+  release_assert(rules.getRules().at("Root").returnType == "R*");
+  release_assert(rules.getRules().at("Y").returnType == "std::vector<something>");
+}
+
 void test()
 {
+  testReturnType();
   test_can_be_nil();
   test_first();
   test_follow();

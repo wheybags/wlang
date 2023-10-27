@@ -9,8 +9,8 @@
 #endif
 
 const char* wlangGrammarStr = R"STR(
-  Root                = FuncList $End;
-  FuncList            = Func FuncList';
+  Root<Root*>         = FuncList $End;
+  FuncList<std::vector<Func*>>            = Func FuncList';
   FuncList'           = FuncList | Nil;
   Func                = Type $Id "(" Func';
   Func'               = ArgList ")" Block | ")" Block;

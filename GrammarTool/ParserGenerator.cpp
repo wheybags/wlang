@@ -1,3 +1,4 @@
+#include <string>
 #include "Grammar.hpp"
 
 std::string generateParser(const Grammar& grammar)
@@ -57,10 +58,11 @@ std::string generateParser(const Grammar& grammar)
   {
     const NonTerminal& rule = grammar.getRules().at(name);
 
-    appendSourceLine("// PARSE " + name + " BEGIN");
-    appendSourceLine("void");
-    appendSourceLine("Parser::parse" + sanitiseName(name) + "(");
-    appendSourceLine("  ParseContext& ctx)");
+    std::string returnType = "void";
+    if (!rule.returnType.empty())
+      returnType = rule.returnType;
+
+    appendSourceLine(returnType + " Parser::parse" + sanitiseName(name) + "(ParseContext& ctx)");
     appendSourceLine("{");
 
     std::vector<std::vector<std::string>> productionFirsts = grammar.first(name);
@@ -94,15 +96,26 @@ std::string generateParser(const Grammar& grammar)
         appendSourceLine("{");
       }
 
+      int32_t nonTerminalIndex = 0;
       for (const ProductionItem& item : production)
       {
         if (item == "Nil")
             continue;
 
         if (item.isStr())
+        {
           appendSourceLine("release_assert(ctx.popCheck(TT::" + tokenTypeMapping.at(item.str()) + "));");
+        }
         else
-          appendSourceLine("parse" + sanitiseName(item.nonTerminal().name) + "(ctx);");
+        {
+          std::string callLine;
+          if (!item.nonTerminal().returnType.empty())
+            callLine += item.nonTerminal().returnType + " v" + std::to_string(nonTerminalIndex) + " = ";
+
+          callLine += "parse" + sanitiseName(item.nonTerminal().name) + "(ctx);";
+
+          appendSourceLine(callLine);
+        }
       }
 
       if (!onlyOne)
@@ -129,7 +142,6 @@ std::string generateParser(const Grammar& grammar)
     }
 
     appendSourceLine("}");
-    appendSourceLine("//END OF PARSE " + name);
     appendSourceLine("");
 
 

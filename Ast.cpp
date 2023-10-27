@@ -103,11 +103,9 @@ void dumpJson(const Root* node, std::string& str, int32_t tabIndex)
 void dumpJson(const FuncList* node, std::string& str, int32_t tabIndex)
 {
   std::vector<Value> values;
-  while (node)
-  {
-    values.push_back(node->func);
-    node = node->next;
-  }
+  values.reserve(node->functions.size());
+  for (Func* func : node->functions)
+    values.emplace_back(func);
   dumpJson(values, str, tabIndex);
 }
 
@@ -147,6 +145,7 @@ void dumpJson(const Arg* node, std::string& str, int32_t tabIndex)
 void dumpJson(const Block* node, std::string& str, int32_t tabIndex)
 {
   std::vector<Value> values;
+  values.reserve(node->statements.size());
   for (const auto& statement : node->statements)
     values.emplace_back(statement);
   dumpJson(values, str, tabIndex);

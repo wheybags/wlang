@@ -19,7 +19,7 @@ private:
   template<typename T> T* makeNode();
 
   Root* parseRoot(ParseContext& ctx);
-  FuncList* parseFuncList(ParseContext& ctx);
+  void parseFuncList(FuncList* funcList, ParseContext& ctx);
   void parseFuncListP(FuncList* funcList, ParseContext& ctx);
   Func* parseFunc(ParseContext& ctx);
   void parseFuncP(Func* func, ParseContext& ctx);
@@ -28,7 +28,7 @@ private:
   void parseStatementListP(Block* block, ParseContext& ctx);
   Statement* parseStatement(ParseContext& ctx);
   void parseStatementP(Id* id, Statement* statement, ParseContext& ctx);
-  Type* parseType(ParseContext& ctx, Id* fromId = nullptr);
+  Type* parseType(Id* fromId, ParseContext& ctx);
   ArgList* parseArgList(ParseContext& ctx);
   void parseArgListP(ArgList* argList, ParseContext& ctx);
   Arg* parseArg(ParseContext& ctx);
