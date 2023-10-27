@@ -1,92 +1,96 @@
 #include <functional>
 #include <sstream>
 #include "Grammar.hpp"
+#include "../StringUtil.hpp"
 
 
 // Man, I forgot a lot of my compiler design theory since college...
 // https://www.tutorialspoint.com/compiler_design/compiler_design_syntax_analysis.htm
 // https://stackoverflow.com/questions/20317198/purpose-of-first-and-follow-sets-in-ll1-parsers
 
-// https://stackoverflow.com/a/46931770
-static std::vector<std::string> split(const std::string &s, char delim)
+static std::vector<std::string> tokenise(std::string_view input)
 {
-  std::vector<std::string> result;
-  std::stringstream ss(s);
-  std::string item;
+  std::vector<std::string> tokens;
 
-  while (getline(ss, item, delim))
+  bool inQuotedString = false;
+  bool inComment = false;
+  std::string accumulator;
+
+  auto breakToken = [&]()
   {
-    if (!item.empty())
-      result.push_back(item);
-  }
+    if (accumulator.empty())
+      return;
 
-  return result;
-}
+    tokens.emplace_back(std::move(accumulator));
+    accumulator.clear();
+  };
 
-static std::vector<std::string> split(const std::string& s, const std::string& delimiter)
-{
-  size_t pos_start = 0, pos_end, delim_len = delimiter.length();
-  std::string token;
-  std::vector<std::string> res;
-
-  while ((pos_end = s.find(delimiter, pos_start)) != std::string::npos)
+  auto advance = [&](size_t chars)
   {
-    token = s.substr(pos_start, pos_end - pos_start);
-    pos_start = pos_end + delim_len;
+    debug_assert(input.size() >= chars);
+    input = std::string_view(input.data() + chars, input.size() - chars);
+  };
 
-    if (!token.empty())
-      res.push_back(token);
-  }
-
-  res.push_back(s.substr(pos_start));
-  return res;
-}
-
-struct BasicResult
-{
-  std::unordered_map<std::string, std::vector<std::vector<std::string>>> rules;
-  std::vector<std::string> keys;
-};
-
-static BasicResult str_to_basic(const std::string& str_table)
-{
-  BasicResult rules_temp;
-
-  for (const std::string& lineStr : split(str_table, '\n'))
+  while (!input.empty())
   {
-    std::vector<std::string> line = split(lineStr, "//");
-    line = split(line[0], ' ');
-
-    if (line.empty())
-        continue;
-
-    std::vector<std::vector<std::string>> productions;
-    std::vector<std::string> acc;
-
-    release_assert(line.size() > 2);
-    release_assert(line[1] == "=");
-    for (int32_t i = 2; i < int32_t(line.size()); i++)
+    if (inComment)
     {
-      if (line[i] == "|")
+      if (input[0] == '\n')
+        inComment = false;
+      advance(1);
+      continue;
+    }
+
+    if (Str::isSpace(input[0]))
+    {
+      breakToken();
+      advance(1);
+      continue;
+    }
+
+    if (!inQuotedString && !inComment)
+    {
+      if (input[0] == '|' || input[0] == '=' || input[0] == ';')
       {
-        productions.emplace_back(std::move(acc));
-        acc.clear();
+        breakToken();
+        accumulator.push_back(input[0]);
+        breakToken();
+        advance(1);
+        continue;
       }
-      else
+
+      if (input.starts_with("//"))
       {
-        acc.emplace_back(std::move(line[i]));
+        advance(2);
+        inComment = true;
+        continue;
       }
     }
 
-    if (!acc.empty())
-      productions.emplace_back(std::move(acc));
+    if (accumulator.empty() && input[0] == '"')
+    {
+      advance(1);
+      inQuotedString = true;
+      accumulator.push_back('"');
+      continue;
+    }
 
-    rules_temp.rules[line[0]] = productions;
-    rules_temp.keys.emplace_back(line[0]);
+    if (inQuotedString && input[0] == '"')
+    {
+      advance(1);
+      inQuotedString = false;
+      accumulator.push_back('"');
+      breakToken();
+      continue;
+    }
+
+    accumulator.push_back(input[0]);
+    advance(1);
   }
 
-  return rules_temp;
+  return tokens;
 }
+
 
 struct GrammarResult
 {
@@ -96,22 +100,57 @@ struct GrammarResult
 
 static GrammarResult make_grammar(const std::string& str_table)
 {
-  BasicResult rules_temp = str_to_basic(str_table);
-
   GrammarResult rules;
-  rules.keys = rules_temp.keys;
-
-  for (const auto& pair: rules_temp.rules)
-    rules.rules[pair.first] = NonTerminal { .name = pair.first };
-
-
-  for (const auto& pair: rules.rules)
+  std::unordered_map<std::string, std::vector<std::vector<std::string>>> rules_temp;
   {
-    const std::string& name = pair.first;
-    for (int32_t prod_index = 0; prod_index < int32_t(rules_temp.rules[name].size()); prod_index++)
+    std::vector<std::string> tokens = tokenise(str_table);
+
+    std::string currentRuleName;
+    std::vector<std::string> accumulator;
+    bool atRuleStart = true;
+
+    for (int32_t i = 0; i < int32_t(tokens.size()); i++)
+    {
+      if (atRuleStart)
+      {
+        release_assert(tokens[i] != ";");
+        release_assert(i < int32_t(tokens.size()) - 1 && tokens[i+1] == "=");
+        rules.rules[tokens[i]] = NonTerminal { .name = tokens[i] };
+        rules.keys.emplace_back(tokens[i]);
+        currentRuleName = tokens[i];
+        atRuleStart = false;
+        i++;
+        continue;
+      }
+
+      if (tokens[i] == ";")
+      {
+        if (!accumulator.empty())
+          rules_temp[currentRuleName].emplace_back(std::move(accumulator));
+        accumulator.clear();
+        atRuleStart = true;
+        continue;
+      }
+
+      if (tokens[i] == "|")
+      {
+        if (!accumulator.empty())
+          rules_temp[currentRuleName].emplace_back(std::move(accumulator));
+        accumulator.clear();
+        continue;
+      }
+
+      accumulator.emplace_back(tokens[i]);
+    }
+  }
+
+
+  for (const std::string& name: rules.keys)
+  {
+    for (int32_t prod_index = 0; prod_index < int32_t(rules_temp[name].size()); prod_index++)
     {
       Production production;
-      for (const std::string& item : rules_temp.rules[name][prod_index])
+      for (const std::string& item : rules_temp[name][prod_index])
         production.emplace_back(item);
 
       if (production.size() > 1)
@@ -123,12 +162,8 @@ static GrammarResult make_grammar(const std::string& str_table)
         }
       }
 
-      if (production.size() == 1 &&
-          production[0] == "Nil" &&
-          prod_index != int32_t(rules_temp.rules[name].size()) - 1)
-      {
+      if (production.size() == 1 && production[0] == "Nil" && prod_index != int32_t(rules_temp[name].size()) - 1)
         release_assert(false && "Nil has to be the last production");
-      }
 
       for (int32_t i = 0; i < int32_t(production.size()); i++)
       {

@@ -4,9 +4,9 @@
 void test_can_be_nil()
 {
   Grammar rules(R"STR(
-    Root = "3" Y $End
-    Y = A | "1" // comment
-    A = "2" | Nil
+    Root = "3" Y $End;
+    Y = A |"1"; // comment
+    A = "2" | Nil;
   )STR");
 
   release_assert(!rules.can_be_nil("Root"));
@@ -15,12 +15,13 @@ void test_can_be_nil()
 
 
   rules = Grammar(R"STR(
-    Root = "x" Y $End
-    Y = A B C D
-    A = "1" | Nil
-    B = "2" | Nil
-    C = "3" | Nil
-    D = "4" | Nil
+    Root = "x" Y $End;
+    Y = A B C D;
+    A = "1" |
+        Nil;
+    B = "2" | Nil;
+    C = "3" | Nil;
+    D = "4" | Nil;
   )STR");
 
   release_assert(!rules.can_be_nil("Root"));
@@ -32,12 +33,12 @@ void test_can_be_nil()
 
 
   rules = Grammar(R"STR(
-      Root = "x" Y
-      Y = A B C D
-      A = "1" | Nil
-      B = "2" | Nil
-      C = "3"
-      D = "4" | Nil
+      Root = "x" Y;
+      Y = A B C D;
+      A = "1" | Nil;
+      B = "2" | Nil;
+      C = "3";
+      D = "4" | Nil;
   )STR");
 
   release_assert(!rules.can_be_nil("Root"));
@@ -53,30 +54,30 @@ using vvs = std::vector<std::vector<std::string>>;
 void test_first()
 {
   Grammar rules(R"STR(
-        Root = "3" Y $End
-        Y = A | "1"
-        A = "2" | Nil
+        Root = "3" Y $End;
+        Y = A | "1";
+        A = "2" | Nil;
   )STR");
   release_assert(rules.first("Root") == vvs{{"\"3\""}});
   release_assert((rules.first("A") == vvs{{"\"2\""}, {"Nil"}}));
   release_assert((rules.first("Y") == vvs{{"\"2\"", "Nil"}, {"\"1\""}}));
 
   rules = Grammar(R"STR(
-      Root = "3" Y $End
-      Y = A | "1"
-      A = "2" | "4"
+      Root = "3" Y $End;
+      Y = A | "1";
+      A = "2" | "4";
   )STR");
   release_assert(rules.first("Root") == vvs{{"\"3\""}});
   release_assert((rules.first("A") == vvs{{"\"2\""}, {"\"4\""}}));
   release_assert((rules.first("Y") == vvs{{"\"2\"", "\"4\""}, {"\"1\""}}));
 
   rules = Grammar(R"STR(
-      Root = "x" Y $End
-      Y = A B C D
-      A = "1" | Nil
-      B = "2" | Nil
-      C = "3"
-      D = "4" | Nil
+      Root = "x" Y $End;
+      Y = A B C D;
+      A = "1" | Nil;
+      B = "2" | Nil;
+      C = "3";
+      D = "4" | Nil;
   )STR");
   release_assert((rules.first("A") == vvs{{"\"1\""}, {"Nil"}}));
   release_assert((rules.first("B") == vvs{{"\"2\""}, {"Nil"}}));
@@ -85,12 +86,12 @@ void test_first()
   release_assert((rules.first("Y") == vvs{{"\"1\"", "Nil", "\"2\"", "\"3\""}}));
 
   rules = Grammar(R"STR(
-      Root = "x" Y $End
-      Y = A B C D
-      A = "1" | Nil
-      B = "2" | Nil
-      C = "3" | Nil
-      D = "4" | Nil
+      Root = "x" Y $End;
+      Y = A B C D;
+      A = "1" | Nil;
+      B = "2" | Nil;
+      C = "3" | Nil;
+      D = "4" | Nil;
   )STR");
   release_assert((rules.first("A") == vvs{{"\"1\""}, {"Nil"}}));
   release_assert((rules.first("B") == vvs{{"\"2\""}, {"Nil"}}));
@@ -104,9 +105,9 @@ using ss = std::unordered_set<std::string>;
 void test_follow()
 {
   Grammar rules(R"STR(
-      Root = A Y $End
-      Y = A | "1"
-      A = "2" | "3"
+      Root = A Y $End;
+      Y = A | "1";
+      A = "2" | "3";
   )STR");
 
   release_assert((rules.follow("Root") == ss{}));
@@ -114,12 +115,12 @@ void test_follow()
   release_assert((rules.follow("Y") == ss{"$End"}));
 
   rules = Grammar(R"STR(
-      Root = "x" Y $End
-      Y = A B C D
-      A = "1" | Nil
-      B = "2" | Nil
-      C = "3"
-      D = "4" | Nil
+      Root = "x" Y $End;
+      Y = A B C D;
+      A = "1" | Nil;
+      B = "2" | Nil;
+      C = "3";
+      D = "4" | Nil;
   )STR");
 
   release_assert((rules.follow("Root") == ss{}));
