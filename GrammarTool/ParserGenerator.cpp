@@ -1,5 +1,6 @@
 #include <string>
 #include "Grammar.hpp"
+#include "../StringUtil.hpp"
 
 std::string generateParser(const Grammar& grammar)
 {
@@ -96,11 +97,75 @@ std::string generateParser(const Grammar& grammar)
         appendSourceLine("{");
       }
 
-      int32_t nonTerminalIndex = 0;
-      for (const ProductionItem& item : production)
+      auto handleSourceInsert = [&](const std::string& sourceInsert)
       {
+        int32_t xStart = 0;
+        {
+          for (int32_t i = 0; i < int32_t(sourceInsert.size()); i++)
+          {
+            if (sourceInsert[i] == '\n')
+            {
+              xStart = 0;
+              continue;
+            }
+
+            if (!Str::isSpace(sourceInsert[i]))
+              break;
+            xStart++;
+          }
+        }
+
+        int32_t linesSent = 0;
+
+        std::string line;
+        bool allSpace = true;
+        int32_t charsOnLine = 0;
+
+        for (char c : sourceInsert)
+        {
+          if (c == '\n')
+          {
+            if (linesSent > 0 || !allSpace)
+              appendSourceLine(line);
+
+            linesSent++;
+            line.clear();
+            allSpace = true;
+            charsOnLine = 0;
+            continue;
+          }
+
+          if (!Str::isSpace(c))
+            allSpace = false;
+
+          if (charsOnLine >= xStart || !Str::isSpace(c))
+            line += c;
+
+          charsOnLine++;
+        }
+
+        if (!line.empty() && allSpace)
+          appendSourceLine(line);
+      };
+
+      int32_t nonTerminalIndex = 0;
+      for (int32_t productionIndex = 0; productionIndex < int32_t(production.size()); productionIndex++)
+      {
+        const ProductionItem& item = production[productionIndex];
+
         if (item == "Nil")
             continue;
+
+        if (!item.codeInsertBefore.empty())
+        {
+          if (productionIndex != 0)
+            appendSourceLine("");
+
+          handleSourceInsert(item.codeInsertBefore);
+
+          if (productionIndex != int32_t(production.size())-1)
+            appendSourceLine("");
+        }
 
         if (item.isStr())
         {
@@ -115,6 +180,13 @@ std::string generateParser(const Grammar& grammar)
           callLine += "parse" + sanitiseName(item.nonTerminal().name) + "(ctx);";
 
           appendSourceLine(callLine);
+        }
+
+        if (!item.codeInsertAfter.empty())
+        {
+          if (productionIndex != 0)
+            appendSourceLine("");
+          handleSourceInsert(item.codeInsertAfter);
         }
       }
 
@@ -143,20 +215,6 @@ std::string generateParser(const Grammar& grammar)
 
     appendSourceLine("}");
     appendSourceLine("");
-
-
-//void Parser::parseFuncListP(FuncList* list, ParseContext& ctx)
-//{
-//  if (ctx.peekCheck(TT::Id))
-//  {
-//    list->next = parseFuncList(ctx);
-//  }
-//  else
-//  {
-//    // Nil
-//    release_assert(FuncListPFollow.count(ctx.peek().type));
-//  }
-//}
   }
 
   return parserSource;

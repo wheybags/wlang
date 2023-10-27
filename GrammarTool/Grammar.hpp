@@ -32,6 +32,15 @@ struct ProductionItem
   const std::string& str() const { release_assert(!_nonTerminal); return _str; }
   const NonTerminal& nonTerminal() const { release_assert(_nonTerminal); return *_nonTerminal; }
 
+  void setNonTerminal(NonTerminal& nonTerminal)
+  {
+    this->_nonTerminal = &nonTerminal;
+    this->_str.clear();
+  }
+
+  std::string codeInsertBefore;
+  std::string codeInsertAfter;
+
 private:
   std::string _str;
   NonTerminal* _nonTerminal = nullptr;

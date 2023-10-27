@@ -9,7 +9,13 @@
 #endif
 
 const char* wlangGrammarStr = R"STR(
-  Root<Root*>         = FuncList $End;
+  Root<Root*>         = {{
+                          Root* rootNode = makeNode<Root>();
+                          rootNode->rootScope = makeNode<Scope>();
+                          ctx.pushScope(rootNode->rootScope);
+                          rootNode->funcList = makeNode<FuncList>();
+                        }} FuncList $End;
+
   FuncList<std::vector<Func*>>            = Func FuncList';
   FuncList'           = FuncList | Nil;
   Func                = Type $Id "(" Func';

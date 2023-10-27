@@ -142,8 +142,66 @@ void testReturnType()
   release_assert(rules.getRules().at("Y").returnType == "std::vector<something>");
 }
 
+void testCodeInsert()
+{
+  {
+    Grammar rules(R"STR(
+      Root<Root*> = {{test code;}} FuncList $End;
+      FuncList<std::vector<Func*>> = Func FuncList';
+    )STR");
+
+    release_assert(rules.getRules().at("Root").productions[0][0].codeInsertBefore == "test code;");
+    release_assert(rules.getRules().at("Root").productions[0][0].codeInsertAfter.empty());
+    release_assert(rules.getRules().at("Root").productions[0][1].codeInsertBefore.empty());
+    release_assert(rules.getRules().at("Root").productions[0][1].codeInsertAfter.empty());
+
+    release_assert(rules.getRules().at("FuncList").productions[0][0].codeInsertBefore.empty());
+    release_assert(rules.getRules().at("FuncList").productions[0][0].codeInsertAfter.empty());
+    release_assert(rules.getRules().at("FuncList").productions[0][1].codeInsertBefore.empty());
+    release_assert(rules.getRules().at("FuncList").productions[0][1].codeInsertAfter.empty());
+  }
+
+  {
+    Grammar rules(R"STR(
+      Root<Root*> = FuncList {{test code;}} "b" $End;
+      FuncList<std::vector<Func*>> = Func FuncList';
+    )STR");
+
+    release_assert(rules.getRules().at("Root").productions[0][0].codeInsertBefore.empty());
+    release_assert(rules.getRules().at("Root").productions[0][0].codeInsertAfter.empty());
+    release_assert(rules.getRules().at("Root").productions[0][1].codeInsertBefore == "test code;");
+    release_assert(rules.getRules().at("Root").productions[0][1].codeInsertAfter.empty());
+    release_assert(rules.getRules().at("Root").productions[0][2].codeInsertBefore.empty());
+    release_assert(rules.getRules().at("Root").productions[0][2].codeInsertAfter.empty());
+
+    release_assert(rules.getRules().at("FuncList").productions[0][0].codeInsertBefore.empty());
+    release_assert(rules.getRules().at("FuncList").productions[0][0].codeInsertAfter.empty());
+    release_assert(rules.getRules().at("FuncList").productions[0][1].codeInsertBefore.empty());
+    release_assert(rules.getRules().at("FuncList").productions[0][1].codeInsertAfter.empty());
+  }
+
+  {
+    Grammar rules(R"STR(
+      Root<Root*> = FuncList $End;
+      FuncList<std::vector<Func*>> = Func FuncList'  {{test code;}};
+    )STR");
+
+    release_assert(rules.getRules().at("Root").productions[0][0].codeInsertBefore.empty());
+    release_assert(rules.getRules().at("Root").productions[0][0].codeInsertAfter.empty());
+    release_assert(rules.getRules().at("Root").productions[0][1].codeInsertBefore.empty());
+    release_assert(rules.getRules().at("Root").productions[0][1].codeInsertAfter.empty());
+
+    release_assert(rules.getRules().at("FuncList").productions[0][0].codeInsertBefore.empty());
+    release_assert(rules.getRules().at("FuncList").productions[0][0].codeInsertAfter.empty());
+    release_assert(rules.getRules().at("FuncList").productions[0][1].codeInsertBefore.empty());
+    release_assert(rules.getRules().at("FuncList").productions[0][1].codeInsertAfter == "test code;");
+  }
+
+}
+
 void test()
 {
+  testCodeInsert();
   testReturnType();
   test_can_be_nil();
   test_first();

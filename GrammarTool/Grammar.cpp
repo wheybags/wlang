@@ -15,6 +15,7 @@ static std::vector<std::string> tokenise(std::string_view input)
   bool inQuotedString = false;
   int32_t angleBracketDepth = 0;
   bool inComment = false;
+  bool inCodeInsert = false;
   std::string accumulator;
 
   auto breakToken = [&]()
@@ -42,15 +43,15 @@ static std::vector<std::string> tokenise(std::string_view input)
       continue;
     }
 
-    if (Str::isSpace(input[0]))
+    if (!inQuotedString && !inComment && angleBracketDepth == 0 && !inCodeInsert)
     {
-      breakToken();
-      advance(1);
-      continue;
-    }
+      if (Str::isSpace(input[0]))
+      {
+        breakToken();
+        advance(1);
+        continue;
+      }
 
-    if (!inQuotedString && !inComment && angleBracketDepth == 0)
-    {
       if (input[0] == '|' || input[0] == '=' || input[0] == ';')
       {
         breakToken();
@@ -73,6 +74,15 @@ static std::vector<std::string> tokenise(std::string_view input)
         advance(1);
         angleBracketDepth = 1;
         accumulator.push_back('<');
+        continue;
+      }
+
+      if (input.starts_with("{{"))
+      {
+        breakToken();
+        advance(2);
+        inCodeInsert = true;
+        accumulator += "{{";
         continue;
       }
     }
@@ -114,6 +124,15 @@ static std::vector<std::string> tokenise(std::string_view input)
       }
     }
 
+    if (inCodeInsert && input.starts_with("}}"))
+    {
+      advance(2);
+      inCodeInsert = false;
+      accumulator += "}}";
+      breakToken();
+      continue;
+    }
+
     accumulator.push_back(input[0]);
     advance(1);
   }
@@ -131,13 +150,28 @@ struct GrammarResult
 static GrammarResult make_grammar(const std::string& str_table)
 {
   GrammarResult rules;
-  std::unordered_map<std::string, std::vector<std::vector<std::string>>> rules_temp;
   {
     std::vector<std::string> tokens = tokenise(str_table);
 
     int32_t ruleStartIndex = 0;
     std::string currentRuleName;
-    std::vector<std::string> accumulator;
+    Production accumulator;
+
+    std::string codeInsert;
+
+    auto breakAccumulator = [&]()
+    {
+      if (!accumulator.empty())
+      {
+        if (!codeInsert.empty())
+        {
+          accumulator[accumulator.size()-1].codeInsertAfter = std::move(codeInsert);
+          codeInsert.clear();
+        }
+        rules.rules[currentRuleName].productions.emplace_back(std::move(accumulator));
+      }
+      accumulator.clear();
+    };
 
     for (int32_t i = 0; i < int32_t(tokens.size()); i++)
     {
@@ -162,18 +196,14 @@ static GrammarResult make_grammar(const std::string& str_table)
 
       if (tokens[i] == ";")
       {
-        if (!accumulator.empty())
-          rules_temp[currentRuleName].emplace_back(std::move(accumulator));
-        accumulator.clear();
+        breakAccumulator();
         ruleStartIndex = i + 1;
         continue;
       }
 
       if (tokens[i] == "|")
       {
-        if (!accumulator.empty())
-          rules_temp[currentRuleName].emplace_back(std::move(accumulator));
-        accumulator.clear();
+        breakAccumulator();
         continue;
       }
 
@@ -185,18 +215,27 @@ static GrammarResult make_grammar(const std::string& str_table)
         continue;
       }
 
-      accumulator.emplace_back(tokens[i]);
+      if (tokens[i].starts_with("{{"))
+      {
+        release_assert(tokens[i].ends_with("}}"));
+        codeInsert = tokens[i].substr(2, tokens[i].length()-4);
+        continue;
+      }
+
+      ProductionItem& item = accumulator.emplace_back(tokens[i]);
+      if (!codeInsert.empty())
+      {
+        item.codeInsertBefore = std::move(codeInsert);
+        codeInsert.clear();
+      }
     }
   }
 
-
   for (const std::string& name: rules.keys)
   {
-    for (int32_t prod_index = 0; prod_index < int32_t(rules_temp[name].size()); prod_index++)
+    for (int32_t prod_index = 0; prod_index < int32_t(rules.rules[name].productions.size()); prod_index++)
     {
-      Production production;
-      for (const std::string& item : rules_temp[name][prod_index])
-        production.emplace_back(item);
+      Production& production = rules.rules[name].productions[prod_index];
 
       if (production.size() > 1)
       {
@@ -207,16 +246,14 @@ static GrammarResult make_grammar(const std::string& str_table)
         }
       }
 
-      if (production.size() == 1 && production[0] == "Nil" && prod_index != int32_t(rules_temp[name].size()) - 1)
+      if (production.size() == 1 && production[0] == "Nil" && prod_index != int32_t(rules.rules[name].productions.size()) - 1)
         release_assert(false && "Nil has to be the last production");
 
       for (int32_t i = 0; i < int32_t(production.size()); i++)
       {
         if (production[i] != "Nil" && isupper(production[i].str()[0]))
-          production[i] = ProductionItem(rules.rules[production[i].str()]);
+          production[i].setNonTerminal(rules.rules[production[i].str()]);
       }
-
-      rules.rules[name].productions.emplace_back(std::move(production));
     }
   }
 
