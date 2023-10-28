@@ -285,14 +285,8 @@ int main()
 
   ParserSource parserSource = generateParser(wlangGrammar);
 
-  std::string existingImplementation = readWholeFileAsString(parserImplementationPath);
-  std::string existingDeclaration = readWholeFileAsString(parserDeclarationPath);
-
-  if (existingImplementation != parserSource.implementationSource)
-    overwriteFileWithString(parserImplementationPath, parserSource.implementationSource);
-
-  if (existingDeclaration != parserSource.declarationSource)
-    overwriteFileWithString(parserDeclarationPath, parserSource.declarationSource);
+  overwriteFileWithString(parserImplementationPath, parserSource.implementationSource);
+  overwriteFileWithString(parserDeclarationPath, parserSource.declarationSource);
 
   return 0;
 }
