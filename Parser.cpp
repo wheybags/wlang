@@ -77,13 +77,32 @@ Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& inter
       if (op == std::get<Op::Type>(intermediate[i]))
       {
         Op* opNode = makeNode<Op>();
-        opNode->left = std::get<Expression*>(intermediate[i-1]);
-        opNode->right = std::get<Expression*>(intermediate[i+1]);
+
+        switch (op)
+        {
+          case Op::Type::CompareEqual:
+          case Op::Type::LogicalAnd:
+          {
+            opNode->left = std::get<Expression*>(intermediate[i-1]);
+            opNode->right = std::get<Expression*>(intermediate[i+1]);
+            intermediate.erase(intermediate.begin() + i, intermediate.begin() + (i+2));
+            break;
+          }
+          case Op::Type::Call:
+          {
+            opNode->left = std::get<Expression*>(intermediate[i-1]);
+            intermediate.erase(intermediate.begin() + i, intermediate.begin() + (i+1));
+            break;
+          }
+          case Op::Type::ENUM_END:
+            release_assert(false);
+        }
+
         opNode->type = op;
         Expression* expression = makeNode<Expression>();
         *expression = opNode;
 
-        intermediate.erase(intermediate.begin() + (i), intermediate.begin() + (i+2));
+
         intermediate[i-1] = expression;
         i -= 2;
       }

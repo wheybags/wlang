@@ -148,7 +148,12 @@ const char* wlangGrammarStr = R"STR(
     "==" Expression<{result}>
   |
     {{ result.push_back(Op::Type::LogicalAnd); }}
-    "&&" Expression<{result}> | Nil;
+    "&&" Expression<{result}>
+  |
+    "(" ")"
+    {{ result.push_back(Op::Type::Call); }}
+  |
+    Nil;
 
 
   Type <{Type*}> =

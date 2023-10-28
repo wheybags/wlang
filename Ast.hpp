@@ -16,6 +16,7 @@ struct Type;
 struct ArgList;
 struct Arg;
 struct Op;
+struct Call;
 
 struct Scope;
 
@@ -96,13 +97,14 @@ struct Op
   {
     CompareEqual,
     LogicalAnd,
+    Call,
 
     ENUM_END
   };
 
   Expression* left = nullptr;
   Expression* right = nullptr;
-  Type type;
+  Type type = Type::ENUM_END;
 };
 
 struct Scope

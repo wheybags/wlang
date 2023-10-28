@@ -10,6 +10,7 @@ using Value = std::variant<
   std::string,
   int32_t>;
 
+
 void dumpJson(const Value& value, std::string& str, int32_t tabIndex)
 {
   if (std::holds_alternative<std::string>(value))
@@ -174,13 +175,22 @@ void dumpJson(const Op* node, std::string& str, int32_t tabIndex)
   switch (node->type)
   {
     case Op::Type::CompareEqual:
-      op = "CompareEqual";
+    {
+      dumpJson({{"nodeType", "OpCompareEqual"}, {"left", node->left}, {"right", node->right}}, str, tabIndex);
       break;
+    }
     case Op::Type::LogicalAnd:
-      op = "LogicalAnd";
+    {
+      dumpJson({{"nodeType", "OpLogicalAnd"}, {"left", node->left}, {"right", node->right}}, str, tabIndex);
       break;
+    }
+    case Op::Type::Call:
+    {
+      dumpJson({{"nodeType", "OpCall"}, {"callable", node->left}}, str, tabIndex);
+      break;
+    }
     case Op::Type::ENUM_END:
       release_assert(false);
   }
-  dumpJson({{"nodeType", "Op" + op}, {"left", node->left}, {"right", node->right}}, str, tabIndex);
+
 }

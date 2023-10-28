@@ -110,22 +110,39 @@ void PlainCGenerator::generate(const Expression* node, std::string& str)
   }
   else if (std::holds_alternative<Op*>(*node))
   {
-    const Op* compareNode = std::get<Op*>(*node);
-    str += "(";
-    generate(compareNode->left, str);
-    switch (compareNode->type)
+    const Op* opNode = std::get<Op*>(*node);
+
+    switch (opNode->type)
     {
       case Op::Type::CompareEqual:
+      {
+        str += "(";
+        generate(opNode->left, str);
         str += " == ";
+        generate(opNode->right, str);
+        str += ")";
         break;
+      }
       case Op::Type::LogicalAnd:
+      {
+        str += "(";
+        generate(opNode->left, str);
         str += " && ";
+        generate(opNode->right, str);
+        str += ")";
         break;
+      }
+      case Op::Type::Call:
+      {
+        generate(opNode->left, str);
+        str += "()";
+        break;
+      }
       case Op::Type::ENUM_END:
         message_and_abort("bad enum");
     }
-    generate(compareNode->right, str);
-    str += ")";
+
+
   }
   else
   {
