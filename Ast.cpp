@@ -73,8 +73,8 @@ void dumpJson(const std::vector<Value>& values, std::string& str, int32_t tabInd
 
 void dumpJson(const Expression* node, std::string& str, int32_t tabIndex)
 {
-  if (std::holds_alternative<Id*>(*node))
-    dumpJson(std::get<Id*>(*node), str, tabIndex);
+  if (std::holds_alternative<std::string>(*node))
+    dumpJson(std::get<std::string>(*node), str, tabIndex);
   else if (std::holds_alternative<int32_t>(*node))
     dumpJson(std::get<int32_t>(*node), str, tabIndex);
   else if (std::holds_alternative<Op*>(*node))
@@ -119,11 +119,6 @@ void dumpJson(const Func* node, std::string& str, int32_t tabIndex)
     {"argList", node->argList},
     {"funcBody", node->funcBody}
   }, str, tabIndex);
-}
-
-void dumpJson(const Id* node, std::string& str, int32_t tabIndex)
-{
-  dumpJson({{"nodeType", "Id"}, {"name", node->name}}, str, tabIndex);
 }
 
 void dumpJson(const ArgList* node, std::string& str, int32_t tabIndex)

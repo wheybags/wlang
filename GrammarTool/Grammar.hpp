@@ -41,6 +41,8 @@ struct ProductionItem
   std::string codeInsertBefore;
   std::string codeInsertAfter;
 
+  std::string parameters;
+
 private:
   std::string _str;
   NonTerminal* _nonTerminal = nullptr;
@@ -54,6 +56,7 @@ struct NonTerminal
 {
   std::string name;
   std::string returnType;
+  std::string arguments;
   std::string codeInsertAfter;
   std::vector<Production> productions;
 };

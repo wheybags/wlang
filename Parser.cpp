@@ -121,12 +121,33 @@ template<typename T> T* Parser::makeNode()
   return &std::get<T>(node);
 }
 
-Id* Parser::parseId(ParseContext& ctx)
+std::string Parser::parseId(ParseContext& ctx)
 {
-  Id *id = makeNode<Id>();
   release_assert(ctx.peek().type == Token::Type::Id);
-  id->name = ctx.pop().idValue;
-  return id;
+  return ctx.pop().idValue;
+}
+
+int32_t Parser::parseInt32(ParseContext& ctx)
+{
+  release_assert(ctx.peek().type == Token::Type::Int32);
+  return ctx.pop().i32Value;
+}
+
+Type* Parser::getType(const std::string& typeName)
+{
+  auto it = types.find(typeName);
+
+  if (it == types.end())
+  {
+    Type* type = makeNode<Type>();
+    type->name = typeName;
+    types.emplace_hint(it, typeName, type);
+    return type;
+  }
+  else
+  {
+    return it->second;
+  }
 }
 
 #include "ParserRules.inl"

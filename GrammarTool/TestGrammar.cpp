@@ -133,8 +133,8 @@ void test_follow()
 void testReturnType()
 {
   Grammar rules(R"STR(
-    Root<R*> = "3" Y $End;
-    Y<std::vector<something>> = A | "1";
+    Root<{R*}> = "3" Y $End;
+    Y<{std::vector<something>}> = A | "1";
     A = "2" | Nil;
   )STR");
 
@@ -146,8 +146,8 @@ void testCodeInsert()
 {
   {
     Grammar rules(R"STR(
-      Root<Root*> = {{test code;}} FuncList $End;
-      FuncList<std::vector<Func*>> = Func FuncList';
+      Root<{Root*}> = {{test code;}} FuncList $End;
+      FuncList<{std::vector<Func*>}> = Func FuncList';
     )STR");
 
     release_assert(rules.getRules().at("Root").productions[0][0].codeInsertBefore == "test code;");
@@ -163,8 +163,8 @@ void testCodeInsert()
 
   {
     Grammar rules(R"STR(
-      Root<Root*> = FuncList {{test code;}} "b" $End;
-      FuncList<std::vector<Func*>> = Func FuncList';
+      Root<{Root*}> = FuncList {{test code;}} "b" $End;
+      FuncList<{std::vector<Func*>}> = Func FuncList';
     )STR");
 
     release_assert(rules.getRules().at("Root").productions[0][0].codeInsertBefore.empty());
@@ -182,8 +182,8 @@ void testCodeInsert()
 
   {
     Grammar rules(R"STR(
-      Root<Root*> = FuncList $End;
-      FuncList<std::vector<Func*>> = Func FuncList'  {{test code;}};
+      Root<{Root*}> = FuncList $End;
+      FuncList<{std::vector<Func*>}> = Func FuncList'  {{test code;}};
     )STR");
 
     release_assert(rules.getRules().at("Root").productions[0][0].codeInsertBefore.empty());
@@ -218,8 +218,22 @@ void testCodeInsert()
   }
 }
 
+void testRuleParameters()
+{
+  {
+    Grammar rules(R"STR(
+      A = "B" B<{1, 2}>;
+      B<{void}><{int x, int y}> = "C" | Nil;
+    )STR");
+
+    release_assert(rules.getRules().at("A").productions[0][1].parameters == "1, 2");
+    release_assert(rules.getRules().at("B").arguments == "int x, int y");
+  }
+}
+
 void test()
 {
+  testRuleParameters();
   testCodeInsert();
   testReturnType();
   test_can_be_nil();

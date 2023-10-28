@@ -18,28 +18,14 @@ public:
 private:
   template<typename T> T* makeNode();
 
-  Root* parseRoot(ParseContext& ctx);
-  void parseFuncList(FuncList* funcList, ParseContext& ctx);
-  void parseFuncListP(FuncList* funcList, ParseContext& ctx);
-  Func* parseFunc(ParseContext& ctx);
-  void parseFuncP(Func* func, ParseContext& ctx);
-  Block* parseBlock(ParseContext& ctx);
-  void parseStatementList(Block* block, ParseContext& ctx);
-  void parseStatementListP(Block* block, ParseContext& ctx);
-  Statement* parseStatement(ParseContext& ctx);
-  void parseStatementP(Id* id, Statement* statement, ParseContext& ctx);
-  Type* parseType(Id* fromId, ParseContext& ctx);
-  ArgList* parseArgList(ParseContext& ctx);
-  void parseArgListP(ArgList* argList, ParseContext& ctx);
-  Arg* parseArg(ParseContext& ctx);
-
   using IntermediateExpressionItem = std::variant<Expression*, Op::Type>;
   using IntermediateExpression = std::vector<IntermediateExpressionItem>;
   Expression* resolveIntermediateExpression(IntermediateExpression&& intermediate);
+  std::string parseId(ParseContext& ctx);
+  int32_t parseInt32(ParseContext& ctx);
+  Type* getType(const std::string& typeName);
 
-  void parseExpression(IntermediateExpression& result, ParseContext& ctx);
-  void parseExpressionP(IntermediateExpression& result, ParseContext& ctx);
-  Id* parseId(ParseContext& ctx);
+#include "ParserRulesDeclarations.inl"
 
 private:
   using Node = std::variant<

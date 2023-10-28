@@ -1,10 +1,11 @@
+#include "ParserGenerator.hpp"
 #include <string>
 #include "Grammar.hpp"
 #include "../StringUtil.hpp"
 
-std::string generateParser(const Grammar& grammar)
+ParserSource generateParser(const Grammar& grammar)
 {
-  std::string parserSource;
+  ParserSource parserSource;
 
   int32_t tabIndex = 0;
   auto appendSourceLine = [&](std::string_view line)
@@ -18,10 +19,10 @@ std::string generateParser(const Grammar& grammar)
       tabIndex += tabDelta;
 
     for (int32_t i = 0; i < tabIndex * 2; i++)
-      parserSource += ' ';
+      parserSource.implementationSource += ' ';
 
-    parserSource += line;
-    parserSource += '\n';
+    parserSource.implementationSource += line;
+    parserSource.implementationSource += '\n';
 
     if (tabDelta > 0)
       tabIndex += tabDelta;
@@ -74,7 +75,7 @@ std::string generateParser(const Grammar& grammar)
       charsOnLine++;
     }
 
-    if (!line.empty() && allSpace)
+    if (!line.empty() && !allSpace)
       appendSourceLine(line);
   };
 
@@ -95,6 +96,12 @@ std::string generateParser(const Grammar& grammar)
     {"$End", "End"},
   };
 
+  std::unordered_map<std::string, std::string> idTokenMapping
+  {
+    {"$Id", "std::string"},
+    {"$Int32", "int32_t"},
+  };
+
   auto sanitiseName = [](const std::string& ruleName)
   {
     std::string nameSanitised = ruleName;
@@ -110,11 +117,20 @@ std::string generateParser(const Grammar& grammar)
   {
     const NonTerminal& rule = grammar.getRules().at(name);
 
-    std::string returnType = "void";
-    if (!rule.returnType.empty())
-      returnType = rule.returnType;
+    // function declaration
+    {
+      std::string returnType = "void";
+      if (!rule.returnType.empty())
+        returnType = rule.returnType;
 
-    appendSourceLine(returnType + " Parser::parse" + sanitiseName(name) + "(ParseContext& ctx)");
+      std::string argsList = "ParseContext& ctx";
+      if (!rule.arguments.empty())
+        argsList += ", " + rule.arguments;
+
+      appendSourceLine(returnType + " Parser::parse" + sanitiseName(name) + "(" + argsList + ")");
+
+      parserSource.declarationSource += returnType + " parse" + sanitiseName(name) + "(" + argsList + ");\n";
+    }
     appendSourceLine("{");
 
     std::vector<std::vector<std::string>> productionFirsts = grammar.first(name);
@@ -124,31 +140,26 @@ std::string generateParser(const Grammar& grammar)
       const Production& production = rule.productions[i];
       const std::vector<std::string>& firsts = productionFirsts[i];
 
-      bool onlyOne = rule.productions.size() == 1;
-
-      if (!onlyOne)
+      std::string firstsCheck;
+      for (const std::string& item: firsts)
       {
-        std::string firstsCheck;
-        for (const std::string& item: firsts)
-        {
-          if (item == "Nil")
-            continue;
-          firstsCheck += "ctx.peekCheck(TT::" + tokenTypeMapping.at(item) + ") || ";
-        }
-
-        if (firstsCheck.empty())
+        if (item == "Nil")
           continue;
-
-        firstsCheck.resize(firstsCheck.size() - 4);
-
-        if (i > 0)
-          appendSourceLine("else if (" + firstsCheck + ")");
-        else
-          appendSourceLine("if (" + firstsCheck + ")");
-        appendSourceLine("{");
+        firstsCheck += "ctx.peekCheck(TT::" + tokenTypeMapping.at(item) + ") || ";
       }
 
-      int32_t nonTerminalIndex = 0;
+      if (firstsCheck.empty())
+        continue;
+
+      firstsCheck.resize(firstsCheck.size() - 4);
+
+      if (i > 0)
+        appendSourceLine("else if (" + firstsCheck + ")");
+      else
+        appendSourceLine("if (" + firstsCheck + ")");
+      appendSourceLine("{");
+
+      int32_t variableIndex = 0;
       for (int32_t productionIndex = 0; productionIndex < int32_t(production.size()); productionIndex++)
       {
         const ProductionItem& item = production[productionIndex];
@@ -163,21 +174,39 @@ std::string generateParser(const Grammar& grammar)
 
           handleSourceInsert(item.codeInsertBefore);
 
-          if (productionIndex != int32_t(production.size())-1)
-            appendSourceLine("");
+          appendSourceLine("");
         }
 
         if (item.isStr())
         {
-          appendSourceLine("release_assert(ctx.popCheck(TT::" + tokenTypeMapping.at(item.str()) + "));");
+          auto it = idTokenMapping.find(item.str());
+          if (it != idTokenMapping.end())
+          {
+            std::string callLine = it->second + " v" + std::to_string(variableIndex) + " = ";
+            variableIndex++;
+
+            callLine += "parse" + tokenTypeMapping.at(item.str()) + "(ctx);";
+            appendSourceLine(callLine);
+          }
+          else
+          {
+            appendSourceLine("release_assert(ctx.popCheck(TT::" + tokenTypeMapping.at(item.str()) + "));");
+          }
         }
         else
         {
           std::string callLine;
-          if (!item.nonTerminal().returnType.empty())
-            callLine += item.nonTerminal().returnType + " v" + std::to_string(nonTerminalIndex) + " = ";
+          if (!item.nonTerminal().returnType.empty() && item.nonTerminal().returnType != "void")
+          {
+            callLine += item.nonTerminal().returnType + " v" + std::to_string(variableIndex) + " = ";
+            variableIndex++;
+          }
 
-          callLine += "parse" + sanitiseName(item.nonTerminal().name) + "(ctx);";
+          std::string args = "ctx";
+          if (!item.parameters.empty())
+            args += ", " + item.parameters;
+
+          callLine += "parse" + sanitiseName(item.nonTerminal().name) + "(" + args + ");";
 
           appendSourceLine(callLine);
         }
@@ -190,8 +219,7 @@ std::string generateParser(const Grammar& grammar)
         }
       }
 
-      if (!onlyOne)
-        appendSourceLine("}");
+      appendSourceLine("}");
     }
 
     if (!rule.codeInsertAfter.empty())
@@ -200,24 +228,30 @@ std::string generateParser(const Grammar& grammar)
       handleSourceInsert(rule.codeInsertAfter);
     }
 
+    appendSourceLine("else");
+    appendSourceLine("{");
+
     if (grammar.can_be_nil(name))
     {
       std::unordered_set<std::string> follows = grammar.follow(name);
 
-      appendSourceLine("else");
-      appendSourceLine("{");
-
       std::string followsCheck;
       for (const std::string& item: follows)
-        followsCheck += "ctx.peekCheck(TT::" + tokenTypeMapping.at(item) + ") &&";
+        followsCheck += "ctx.peekCheck(TT::" + tokenTypeMapping.at(item) + ") || ";
 
       release_assert(!followsCheck.empty());
-      followsCheck.resize(followsCheck.size() - 3);
+      followsCheck.resize(followsCheck.size() - 4);
 
-      appendSourceLine("release_assert(" + followsCheck + ")");
+      appendSourceLine("release_assert(" + followsCheck + ");");
 
-      appendSourceLine("}");
     }
+    else
+    {
+      appendSourceLine("release_assert(false);");
+    }
+
+    appendSourceLine("}");
+
 
     appendSourceLine("}");
     appendSourceLine("");

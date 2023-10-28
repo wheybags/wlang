@@ -3,4 +3,9 @@
 
 class Grammar;
 
-std::string generateParser(const Grammar& grammar);
+struct ParserSource
+{
+  std::string implementationSource;
+  std::string declarationSource;
+};
+ParserSource generateParser(const Grammar& grammar);

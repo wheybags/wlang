@@ -13,9 +13,9 @@ static std::vector<std::string> tokenise(std::string_view input)
   std::vector<std::string> tokens;
 
   bool inQuotedString = false;
-  int32_t angleBracketDepth = 0;
   bool inComment = false;
   bool inCodeInsert = false;
+  bool inParameterInsert = false;
   std::string accumulator;
 
   auto breakToken = [&]()
@@ -43,7 +43,7 @@ static std::vector<std::string> tokenise(std::string_view input)
       continue;
     }
 
-    if (!inQuotedString && !inComment && angleBracketDepth == 0 && !inCodeInsert)
+    if (!inQuotedString && !inComment && !inParameterInsert && !inCodeInsert)
     {
       if (Str::isSpace(input[0]))
       {
@@ -68,12 +68,12 @@ static std::vector<std::string> tokenise(std::string_view input)
         continue;
       }
 
-      if (input[0] == '<')
+      if (input.starts_with("<{"))
       {
         breakToken();
-        advance(1);
-        angleBracketDepth = 1;
-        accumulator.push_back('<');
+        advance(2);
+        inParameterInsert = true;
+        accumulator += "<{";
         continue;
       }
 
@@ -104,24 +104,13 @@ static std::vector<std::string> tokenise(std::string_view input)
       continue;
     }
 
-    if (angleBracketDepth)
+    if (inParameterInsert && input.starts_with("}>"))
     {
-      if (input[0] == '>')
-      {
-        angleBracketDepth--;
-
-        if (angleBracketDepth == 0)
-        {
-          advance(1);
-          accumulator.push_back('>');
-          breakToken();
-          continue;
-        }
-      }
-      else if (input[0] == '<')
-      {
-        angleBracketDepth++;
-      }
+      advance(2);
+      inParameterInsert = false;
+      accumulator += "}>";
+      breakToken();
+      continue;
     }
 
     if (inCodeInsert && input.starts_with("}}"))
@@ -189,21 +178,48 @@ static GrammarResult make_grammar(const std::string& str_table)
         }
 
         release_assert(tokens[i] != ";");
-        release_assert((i < int32_t(tokens.size()) - 1 && tokens[i+1] == "=") ||
-                       (i < int32_t(tokens.size()) - 2 && tokens[i+1][0] == '<' && tokens[i+2] == "="));
-        rules.rules[tokens[i]] = NonTerminal { .name = tokens[i] };
-        rules.keys.emplace_back(tokens[i]);
-        currentRuleName = tokens[i];
+
         ruleStartIndex = i;
+        const std::string& ruleStartToken = tokens[i];
+        const std::string* returnTypeToken = nullptr;
+        const std::string* argumentsToken = nullptr;
+
+        while (true)
+        {
+          i++;
+          release_assert(i < int32_t(tokens.size()));
+
+          if (tokens[i].starts_with("<{"))
+          {
+            release_assert(tokens[i].ends_with("}>"));
+            if (returnTypeToken)
+              argumentsToken = &tokens[i];
+            else
+              returnTypeToken = &tokens[i];
+          }
+          else if (tokens[i] == "=")
+          {
+            break;
+          }
+          else
+          {
+            release_assert(false);
+          }
+        }
+
+        NonTerminal& newRule = rules.rules[ruleStartToken] = NonTerminal { .name = ruleStartToken };
+        rules.keys.emplace_back(ruleStartToken);
+        currentRuleName = ruleStartToken;
+
+        if (returnTypeToken)
+          newRule.returnType = returnTypeToken->substr(2, returnTypeToken->length()-4);
+        if (argumentsToken)
+          newRule.arguments = argumentsToken->substr(2, argumentsToken->length()-4);
+
         continue;
       }
 
-      if (tokens[i] == "=")
-      {
-        release_assert((i == ruleStartIndex + 1) ||
-                       (i == ruleStartIndex + 2 && tokens[i-1][0] == '<'));
-        continue;
-      }
+      release_assert(tokens[i] != "=");
 
       if (tokens[i] == ";")
       {
@@ -218,18 +234,18 @@ static GrammarResult make_grammar(const std::string& str_table)
         continue;
       }
 
-      if (tokens[i].starts_with("<"))
-      {
-        release_assert(tokens[i][tokens[i].length()-1] == '>');
-        release_assert(i == ruleStartIndex + 1);
-        rules.rules[currentRuleName].returnType = tokens[i].substr(1, tokens[i].length()-2);
-        continue;
-      }
-
       if (tokens[i].starts_with("{{"))
       {
         release_assert(tokens[i].ends_with("}}"));
         codeInsert = tokens[i].substr(2, tokens[i].length()-4);
+        continue;
+      }
+
+      if (tokens[i].starts_with("<{"))
+      {
+        release_assert(tokens[i].ends_with("}>"));
+        release_assert(!accumulator.empty());
+        accumulator[accumulator.size()-1].parameters = tokens[i].substr(2, tokens[i].length()-4);
         continue;
       }
 
