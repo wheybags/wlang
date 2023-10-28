@@ -16,7 +16,6 @@ struct Type;
 struct ArgList;
 struct Arg;
 struct Op;
-struct Call;
 
 struct Scope;
 

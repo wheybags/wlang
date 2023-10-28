@@ -183,6 +183,7 @@ static GrammarResult make_grammar(const std::string& str_table)
         const std::string& ruleStartToken = tokens[i];
         const std::string* returnTypeToken = nullptr;
         const std::string* argumentsToken = nullptr;
+        const std::string* codeBeforeToken = nullptr;
 
         while (true)
         {
@@ -201,6 +202,12 @@ static GrammarResult make_grammar(const std::string& str_table)
           {
             break;
           }
+          else if (tokens[i].starts_with("{{"))
+          {
+            release_assert(!codeBeforeToken);
+            release_assert(tokens[i].ends_with("}}"));
+            codeBeforeToken = &tokens[i];
+          }
           else
           {
             release_assert(false);
@@ -215,6 +222,8 @@ static GrammarResult make_grammar(const std::string& str_table)
           newRule.returnType = returnTypeToken->substr(2, returnTypeToken->length()-4);
         if (argumentsToken)
           newRule.arguments = argumentsToken->substr(2, argumentsToken->length()-4);
+        if (codeBeforeToken)
+          newRule.codeInsertBefore = codeBeforeToken->substr(2, codeBeforeToken->length()-4);
 
         continue;
       }

@@ -133,6 +133,12 @@ ParserSource generateParser(const Grammar& grammar)
     }
     appendSourceLine("{");
 
+    if (!rule.codeInsertBefore.empty())
+    {
+      handleSourceInsert(rule.codeInsertBefore);
+      appendSourceLine("");
+    }
+
     std::vector<std::vector<std::string>> productionFirsts = grammar.first(name);
 
     for (int32_t i = 0; i < int32_t(rule.productions.size()); i++)
@@ -222,12 +228,6 @@ ParserSource generateParser(const Grammar& grammar)
       appendSourceLine("}");
     }
 
-    if (!rule.codeInsertAfter.empty())
-    {
-      appendSourceLine("");
-      handleSourceInsert(rule.codeInsertAfter);
-    }
-
     appendSourceLine("else");
     appendSourceLine("{");
 
@@ -264,6 +264,11 @@ ParserSource generateParser(const Grammar& grammar)
 
     appendSourceLine("}");
 
+    if (!rule.codeInsertAfter.empty())
+    {
+      appendSourceLine("");
+      handleSourceInsert(rule.codeInsertAfter);
+    }
 
     appendSourceLine("}");
     appendSourceLine("");

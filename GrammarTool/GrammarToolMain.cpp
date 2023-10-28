@@ -57,9 +57,10 @@ const char* wlangGrammarStr = R"STR(
     StatementList<{block}> | Nil;
 
 
-  Statement <{Statement*}> =
+  Statement <{Statement*}>
+    {{ Statement* statement = makeNode<Statement>(); }}
+  =
     {{
-      Statement* statement = makeNode<Statement>();
       ReturnStatement* returnStatement = makeNode<ReturnStatement>();
       IntermediateExpression intermediate;
     }}
@@ -67,27 +68,24 @@ const char* wlangGrammarStr = R"STR(
     {{
       returnStatement->retval = resolveIntermediateExpression(std::move(intermediate));
       *statement = returnStatement;
-      return statement;
     }}
   |
     // declaration, or an expression that starts with $Id
     // This awkwardness exists because declarations (and assignments) are not expressions, which is a design choice
     // We basically need to copy paste the rules from Expression into Statement, so we can allow any expression as a statement
-    {{ Statement* statement = makeNode<Statement>(); }}
     $Id StatementThatStartsWithId <{v0, statement}>
-    {{ return statement; }}
   |
     // statement that starts with an expression that starts with $Int32
     $Int32
     {{
-      Statement* statement = makeNode<Statement>();
       Expression* partial = makeNode<Expression>();
       *partial = v0;
       IntermediateExpression intermediate;
       intermediate.push_back(partial);
     }}
     Expression'<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}>
-    {{ return statement; }};
+  ;
+    {{ return statement; }}
 
 
   StatementThatStartsWithId <{void}> <{const std::string& id, Statement* statement}> =
@@ -127,17 +125,17 @@ const char* wlangGrammarStr = R"STR(
     {{ *statement = resolveIntermediateExpression(std::move(intermediateExpression)); }};
 
 
-  Expression <{void}> <{IntermediateExpression& result}> =
+  Expression <{void}> <{IntermediateExpression& result}>
+    {{ Expression* expression = makeNode<Expression>(); }}
+  =
     $Id
     {{
-      Expression* expression = makeNode<Expression>();
       *expression = v0;
       result.push_back(expression);
     }} Expression'<{result}>
   |
     $Int32
     {{
-      Expression* expression = makeNode<Expression>();
       *expression = v0;
       result.push_back(expression);
     }} Expression'<{result}>;

@@ -216,6 +216,16 @@ void testCodeInsert()
     release_assert(rules.getRules().at("A").codeInsertAfter.empty());
     release_assert(rules.getRules().at("B").codeInsertAfter == "test code;");
   }
+
+  {
+    Grammar rules(R"STR(
+      A = "A" | "B" B;
+      B {{test code before;}} = Nil; {{test code after;}}
+    )STR");
+
+    release_assert(rules.getRules().at("B").codeInsertBefore == "test code before;");
+    release_assert(rules.getRules().at("B").codeInsertAfter == "test code after;");
+  }
 }
 
 void testRuleParameters()
