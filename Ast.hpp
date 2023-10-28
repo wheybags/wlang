@@ -28,7 +28,8 @@ using Expression = std::variant<std::monostate,
 using Statement = std::variant<std::monostate,
   ReturnStatement*,
   VariableDeclaration*,
-  Assignment*>;
+  Assignment*,
+  Expression*>;
 
 struct Root
 {

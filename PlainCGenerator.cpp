@@ -86,6 +86,10 @@ void PlainCGenerator::generate(const Statement* node, std::string& str)
     str += " = ";
     generate(assignment->right, str);
   }
+  else if (std::holds_alternative<Expression*>(*node))
+  {
+    generate(std::get<Expression*>(*node), str);
+  }
   else
   {
     message_and_abort("bad Statement");

@@ -233,6 +233,18 @@ ParserSource generateParser(const Grammar& grammar)
 
     if (grammar.can_be_nil(name))
     {
+      // if Nil is direct, then insert code attached to it (if any)
+      {
+        const Production& production = rule.productions[rule.productions.size()-1];
+        if (production.size() == 1 && production[0] == "Nil")
+        {
+          if (!production[0].codeInsertBefore.empty())
+            handleSourceInsert(production[0].codeInsertBefore);
+          if (!production[0].codeInsertAfter.empty())
+            handleSourceInsert(production[0].codeInsertAfter);
+        }
+      }
+
       std::unordered_set<std::string> follows = grammar.follow(name);
 
       std::string followsCheck;

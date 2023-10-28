@@ -3,19 +3,18 @@
 #include "PlainCGenerator.hpp"
 
 std::string inputString = R"STRING_RAW(
+  i32 func(i32 x, i32 y)
+  {
+    return x == 1 && 1;
+  }
 
-i32 func(i32 x, i32 y)
-{
-  return x == 1 && 1;
-}
-
-i32 main()
-{
-  i32 var;
-  var = 1;
-  return 0;
-}
-
+  i32 main()
+  {
+    i32 var;
+    var = 1;
+    1;
+    return 0;
+  }
 )STRING_RAW";
 
 int main()

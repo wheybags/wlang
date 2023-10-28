@@ -91,6 +91,8 @@ void dumpJson(const Statement* node, std::string& str, int32_t tabIndex)
     dumpJson(std::get<VariableDeclaration*>(*node), str, tabIndex);
   else if (std::holds_alternative<Assignment*>(*node))
     dumpJson(std::get<Assignment*>(*node), str, tabIndex);
+  else if (std::holds_alternative<Expression*>(*node))
+    dumpJson(std::get<Expression*>(*node), str, tabIndex);
   else
     message_and_abort("empty expression");
 }

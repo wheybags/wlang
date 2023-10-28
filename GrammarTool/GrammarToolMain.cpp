@@ -70,12 +70,27 @@ const char* wlangGrammarStr = R"STR(
       return statement;
     }}
   |
+    // declaration, or an expression that starts with $Id
+    // This awkwardness exists because declarations (and assignments) are not expressions, which is a design choice
+    // We basically need to copy paste the rules from Expression into Statement, so we can allow any expression as a statement
     {{ Statement* statement = makeNode<Statement>(); }}
-    $Id Statement'<{v0, statement}>
-    {{ return statement; }} ;
+    $Id StatementThatStartsWithId <{v0, statement}>
+    {{ return statement; }}
+  |
+    // statement that starts with an expression that starts with $Int32
+    $Int32
+    {{
+      Statement* statement = makeNode<Statement>();
+      Expression* partial = makeNode<Expression>();
+      *partial = v0;
+      IntermediateExpression intermediate;
+      intermediate.push_back(partial);
+    }}
+    Expression'<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}>
+    {{ return statement; }};
 
 
-  Statement' <{void}> <{const std::string& id, Statement* statement}> =
+  StatementThatStartsWithId <{void}> <{const std::string& id, Statement* statement}> =
     // declaration
     $Id
     {{
@@ -85,23 +100,31 @@ const char* wlangGrammarStr = R"STR(
       *statement = variableDeclaration;
     }}
   |
-    // assign
+    // assign, or standalone expression that starts with id
     {{
       Expression* partial = makeNode<Expression>();
       *partial = id;
-      IntermediateExpression intermediateL;
-      intermediateL.push_back(partial);
+      IntermediateExpression intermediate;
+      intermediate.push_back(partial);
     }}
-    Expression'<{intermediateL}> "="
+    Expression'<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}>;
+
+
+  TheRestOfAStatement <{void}> <{IntermediateExpression intermediateExpression, Statement* statement}> =
+    "="
     {{
       IntermediateExpression intermediateR;
-    }} Expression<{intermediateR}>
+    }}
+    Expression<{intermediateR}>
     {{
       Assignment* assignment = makeNode<Assignment>();
-      assignment->left = resolveIntermediateExpression(std::move(intermediateL));
+      assignment->left = resolveIntermediateExpression(std::move(intermediateExpression));
       assignment->right = resolveIntermediateExpression(std::move(intermediateR));
       *statement = assignment;
-    }} ;
+    }}
+  |
+    Nil
+    {{ *statement = resolveIntermediateExpression(std::move(intermediateExpression)); }};
 
 
   Expression <{void}> <{IntermediateExpression& result}> =
@@ -275,6 +298,8 @@ int main()
   test();
 
   Grammar wlangGrammar(wlangGrammarStr);
+
+  dumpFirstFollows(wlangGrammar);
 
   std::filesystem::path rootPath = getPathToThisExecutable();
   while (!std::filesystem::exists(rootPath / "Parser.cpp"))
