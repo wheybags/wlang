@@ -18,7 +18,7 @@ public:
 private:
   template<typename T> T* makeNode();
 
-  using IntermediateExpressionItem = std::variant<Expression*, Op::Type>;
+  using IntermediateExpressionItem = std::variant<Expression*, Op::Type, std::vector<Expression*>>;
   using IntermediateExpression = std::vector<IntermediateExpressionItem>;
   Expression* resolveIntermediateExpression(IntermediateExpression&& intermediate);
   std::string parseId(ParseContext& ctx);

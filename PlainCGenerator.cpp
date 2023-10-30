@@ -134,8 +134,16 @@ void PlainCGenerator::generate(const Expression* node, std::string& str)
       }
       case Op::Type::Call:
       {
+        str += "(";
         generate(opNode->left, str);
-        str += "()";
+        str += ")(";
+        for (int32_t i = 0; i < int32_t(opNode->callArgs.size()); i++)
+        {
+          generate(opNode->callArgs[i], str);
+          if (i != int32_t(opNode->callArgs.size()) - 1)
+            str += ", ";
+        }
+        str += ")";
         break;
       }
       case Op::Type::ENUM_END:

@@ -148,11 +148,27 @@ const char* wlangGrammarStr = R"STR(
     {{ result.push_back(Op::Type::LogicalAnd); }}
     "&&" Expression<{result}>
   |
-    "(" ")"
-    {{ result.push_back(Op::Type::Call); }}
+    {{ std::vector<Expression*> argList; }}
+    "(" CallParamList<{argList}> ")"
+    {{
+      result.emplace_back(Op::Type::Call);
+      result.emplace_back(std::move(argList));
+    }}
   |
     Nil;
 
+  CallParamList <{void}> <{std::vector<Expression*>& argList}> =
+    {{ IntermediateExpression intermediateExpression; }}
+    Expression<{intermediateExpression}>
+    {{ argList.emplace_back(resolveIntermediateExpression(std::move(intermediateExpression))); }}
+    CallParamList'<{argList}>
+  |
+    Nil;
+
+  CallParamList' <{void}> <{std::vector<Expression*>& argList}> =
+    "," CallParamList<{argList}>
+  |
+    Nil;
 
   Type <{Type*}> =
     $Id {{ return getType(v0); }};

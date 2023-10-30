@@ -80,6 +80,13 @@ Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& inter
 
         switch (op)
         {
+          case Op::Type::Call:
+          {
+            opNode->left = std::get<Expression*>(intermediate[i-1]);
+            opNode->callArgs = std::move(std::get<std::vector<Expression*>>(intermediate[i+1]));
+            intermediate.erase(intermediate.begin() + i, intermediate.begin() + (i+2));
+            break;
+          }
           case Op::Type::CompareEqual:
           case Op::Type::LogicalAnd:
           {
@@ -88,12 +95,7 @@ Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& inter
             intermediate.erase(intermediate.begin() + i, intermediate.begin() + (i+2));
             break;
           }
-          case Op::Type::Call:
-          {
-            opNode->left = std::get<Expression*>(intermediate[i-1]);
-            intermediate.erase(intermediate.begin() + i, intermediate.begin() + (i+1));
-            break;
-          }
+
           case Op::Type::ENUM_END:
             release_assert(false);
         }

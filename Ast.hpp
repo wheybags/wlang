@@ -94,15 +94,19 @@ struct Op
 {
   enum class Type
   {
+    Call,
+
     CompareEqual,
     LogicalAnd,
-    Call,
 
     ENUM_END
   };
 
   Expression* left = nullptr;
   Expression* right = nullptr;
+
+  std::vector<Expression*> callArgs;
+
   Type type = Type::ENUM_END;
 };
 

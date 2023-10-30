@@ -7,9 +7,12 @@ using Value = std::variant<
   FOR_EACH_AST_TYPE
 # undef X
 
+  std::vector<Expression*>,
   std::string,
   int32_t>;
 
+template <typename T>
+void dumpJson(const std::vector<T>& values, std::string& str, int32_t tabIndex);
 
 void dumpJson(const Value& value, std::string& str, int32_t tabIndex)
 {
@@ -17,6 +20,8 @@ void dumpJson(const Value& value, std::string& str, int32_t tabIndex)
     str += "\"" + std::get<std::string>(value) + "\"";
   else if (std::holds_alternative<int32_t>(value))
     str += std::to_string(std::get<int32_t>(value));
+  else if (std::holds_alternative<std::vector<Expression*>>(value))
+    dumpJson(std::get<std::vector<Expression*>>(value), str, tabIndex);
 
 # define X(Type) \
   else if (std::holds_alternative<Type*>(value)) \
@@ -50,7 +55,8 @@ void dumpJson(const std::vector<std::pair<std::string, Value>>& values, std::str
   str += std::string(tabIndex * 2, ' ') + "}";
 }
 
-void dumpJson(const std::vector<Value>& values, std::string& str, int32_t tabIndex)
+template <typename T>
+void dumpJson(const std::vector<T>& values, std::string& str, int32_t tabIndex)
 {
   str += "[\n";
   tabIndex++;
@@ -169,6 +175,7 @@ void dumpJson(const Type* node, std::string& str, int32_t tabIndex)
   dumpJson({{"nodeType", "Type"}, {"name", node->name}}, str, tabIndex);
 }
 
+
 void dumpJson(const Op* node, std::string& str, int32_t tabIndex)
 {
   std::string op;
@@ -186,7 +193,7 @@ void dumpJson(const Op* node, std::string& str, int32_t tabIndex)
     }
     case Op::Type::Call:
     {
-      dumpJson({{"nodeType", "OpCall"}, {"callable", node->left}}, str, tabIndex);
+      dumpJson({{"nodeType", "OpCall"}, {"callable", node->left}, {"arguments", node->callArgs}}, str, tabIndex);
       break;
     }
     case Op::Type::ENUM_END:
