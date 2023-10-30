@@ -157,7 +157,10 @@ void dumpJson(const Block* node, std::string& str, int32_t tabIndex)
 
 void dumpJson(const VariableDeclaration* node, std::string& str, int32_t tabIndex)
 {
-  dumpJson({{"nodeType", "VariableDeclaration"}, {"type", node->type}, {"name", node->name}}, str, tabIndex);
+  std::vector<std::pair<std::string, Value>> values {{"nodeType", "VariableDeclaration"}, {"type", node->type}, {"name", node->name}};
+  if (node->initialiser)
+    values.emplace_back("initialiser", node->initialiser);
+  dumpJson(values, str, tabIndex);
 }
 
 void dumpJson(const Assignment* node, std::string& str, int32_t tabIndex)

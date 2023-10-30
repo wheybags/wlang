@@ -78,6 +78,11 @@ void PlainCGenerator::generate(const Statement* node, std::string& str)
   {
     VariableDeclaration* variableDeclaration = std::get<VariableDeclaration*>(*node);
     str += builtinTypeMapping.at(variableDeclaration->type->name) + " " + variableDeclaration->name;
+    if (variableDeclaration->initialiser)
+    {
+      str += " = ";
+      generate(variableDeclaration->initialiser, str);
+    }
   }
   else if (std::holds_alternative<Assignment*>(*node))
   {

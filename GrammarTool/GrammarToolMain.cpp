@@ -90,11 +90,12 @@ const char* wlangGrammarStr = R"STR(
 
   StatementThatStartsWithId <{void}> <{const std::string& id, Statement* statement}> =
     // declaration
-    $Id
+    $Id TheRestOfADeclaration
     {{
       VariableDeclaration* variableDeclaration = makeNode<VariableDeclaration>();
       variableDeclaration->type = getType(id);
       variableDeclaration->name = v0;
+      variableDeclaration->initialiser = v1;
       *statement = variableDeclaration;
     }}
   |
@@ -106,6 +107,15 @@ const char* wlangGrammarStr = R"STR(
       intermediate.push_back(partial);
     }}
     Expression'<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}>;
+
+  TheRestOfADeclaration <{Expression*}> =
+    {{ IntermediateExpression intermediateExpression; }}
+    "=" Expression<{intermediateExpression}>
+    {{ return resolveIntermediateExpression(std::move(intermediateExpression)); }}
+  |
+    Nil
+    {{ return nullptr; }}
+  ;
 
 
   TheRestOfAStatement <{void}> <{IntermediateExpression intermediateExpression, Statement* statement}> =

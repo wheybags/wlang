@@ -72,6 +72,7 @@ struct VariableDeclaration
 {
   Type* type = nullptr;
   std::string name;
+  Expression* initialiser = nullptr; // maybe null
 };
 
 struct Assignment
