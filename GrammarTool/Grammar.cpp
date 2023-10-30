@@ -278,12 +278,12 @@ static GrammarResult make_grammar(const std::string& str_table)
         for (const auto& item: production)
         {
           if (item == "Nil")
-            release_assert(false && "Nil can only appear alone");
+            message_and_abort("Nil can only appear alone");
         }
       }
 
       if (production.size() == 1 && production[0] == "Nil" && prod_index != int32_t(rules.rules[name].productions.size()) - 1)
-        release_assert(false && "Nil has to be the last production");
+        message_and_abort("Nil has to be the last production");
 
       for (int32_t i = 0; i < int32_t(production.size()); i++)
       {

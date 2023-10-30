@@ -95,11 +95,11 @@ struct Op
 {
   enum class Type
   {
-    Call,
-
     CompareEqual,
     LogicalAnd,
-
+    Call,
+    Add,
+    Subtract,
     ENUM_END
   };
 

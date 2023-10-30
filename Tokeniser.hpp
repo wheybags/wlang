@@ -19,6 +19,8 @@ struct Token
     Return,
     Semicolon,
     Assign,
+    Add,
+    Subtract,
     End
   };
 

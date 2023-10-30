@@ -90,6 +90,8 @@ ParserSource generateParser(const Grammar& grammar)
     {"\"}\"", "CloseBrace"},
     {"\"==\"", "CompareEqual"},
     {"\"&&\"", "LogicalAnd"},
+    {"\"+\"", "Add"},
+    {"\"-\"", "Subtract"},
     {"\"return\"", "Return"},
     {"\";\"", "Semicolon"},
     {"\"=\"", "Assign"},
@@ -234,16 +236,11 @@ ParserSource generateParser(const Grammar& grammar)
     if (grammar.can_be_nil(name))
     {
       // if Nil is direct, then insert code attached to it (if any)
-      {
-        const Production& production = rule.productions[rule.productions.size()-1];
-        if (production.size() == 1 && production[0] == "Nil")
-        {
-          if (!production[0].codeInsertBefore.empty())
-            handleSourceInsert(production[0].codeInsertBefore);
-          if (!production[0].codeInsertAfter.empty())
-            handleSourceInsert(production[0].codeInsertAfter);
-        }
-      }
+      const Production& lastProduction = rule.productions[rule.productions.size() - 1];
+      bool lastProductionIsNil = lastProduction.size() == 1 && lastProduction[0] == "Nil";
+
+      if (lastProductionIsNil && !lastProduction[0].codeInsertBefore.empty())
+        handleSourceInsert(lastProduction[0].codeInsertBefore);
 
       std::unordered_set<std::string> follows = grammar.follow(name);
 
@@ -256,6 +253,8 @@ ParserSource generateParser(const Grammar& grammar)
 
       appendSourceLine("release_assert(" + followsCheck + ");");
 
+      if (lastProductionIsNil && !lastProduction[0].codeInsertAfter.empty())
+        handleSourceInsert(lastProduction[0].codeInsertAfter);
     }
     else
     {

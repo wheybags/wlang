@@ -184,6 +184,16 @@ void dumpJson(const Op* node, std::string& str, int32_t tabIndex)
   std::string op;
   switch (node->type)
   {
+    case Op::Type::Add:
+    {
+      dumpJson({{"nodeType", "OpAdd"}, {"left", node->left}, {"right", node->right}}, str, tabIndex);
+      break;
+    }
+    case Op::Type::Subtract:
+    {
+      dumpJson({{"nodeType", "OpSubtract"}, {"left", node->left}, {"right", node->right}}, str, tabIndex);
+      break;
+    }
     case Op::Type::CompareEqual:
     {
       dumpJson({{"nodeType", "OpCompareEqual"}, {"left", node->left}, {"right", node->right}}, str, tabIndex);

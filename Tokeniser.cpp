@@ -16,6 +16,8 @@ const std::vector<std::pair<std::string_view, Token::Type>> keywords
   {"}", Token::Type::CloseBrace},
   {";", Token::Type::Semicolon},
   {"=", Token::Type::Assign},
+  {"+", Token::Type::Add},
+  {"-", Token::Type::Subtract},
 };
 
 std::optional<int32_t> parseInt32(std::string_view str)

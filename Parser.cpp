@@ -70,45 +70,74 @@ Parser::Parser()
 
 Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& intermediate)
 {
-  for (Op::Type op = (Op::Type)0; op != Op::Type::ENUM_END; op = (Op::Type)(int32_t(op) + 1))
+  auto outputOp = [&](Op::Type op, int32_t& i)
   {
-    for (int32_t i = 1; i < int32_t(intermediate.size()); i += 2)
+    Op* opNode = makeNode<Op>();
+
+    switch (op)
     {
-      if (op == std::get<Op::Type>(intermediate[i]))
+      case Op::Type::Call:
       {
-        Op* opNode = makeNode<Op>();
-
-        switch (op)
-        {
-          case Op::Type::Call:
-          {
-            opNode->left = std::get<Expression*>(intermediate[i-1]);
-            opNode->callArgs = std::move(std::get<std::vector<Expression*>>(intermediate[i+1]));
-            intermediate.erase(intermediate.begin() + i, intermediate.begin() + (i+2));
-            break;
-          }
-          case Op::Type::CompareEqual:
-          case Op::Type::LogicalAnd:
-          {
-            opNode->left = std::get<Expression*>(intermediate[i-1]);
-            opNode->right = std::get<Expression*>(intermediate[i+1]);
-            intermediate.erase(intermediate.begin() + i, intermediate.begin() + (i+2));
-            break;
-          }
-
-          case Op::Type::ENUM_END:
-            release_assert(false);
-        }
-
-        opNode->type = op;
-        Expression* expression = makeNode<Expression>();
-        *expression = opNode;
-
-
-        intermediate[i-1] = expression;
-        i -= 2;
+        opNode->left = std::get<Expression*>(intermediate[i-1]);
+        opNode->callArgs = std::move(std::get<std::vector<Expression*>>(intermediate[i+1]));
+        intermediate.erase(intermediate.begin() + i, intermediate.begin() + (i+2));
+        break;
       }
+      case Op::Type::Add:
+      case Op::Type::Subtract:
+      case Op::Type::CompareEqual:
+      case Op::Type::LogicalAnd:
+      {
+        opNode->left = std::get<Expression*>(intermediate[i-1]);
+        opNode->right = std::get<Expression*>(intermediate[i+1]);
+        intermediate.erase(intermediate.begin() + i, intermediate.begin() + (i+2));
+        break;
+      }
+
+      case Op::Type::ENUM_END:
+        release_assert(false);
     }
+
+    opNode->type = op;
+    Expression* expression = makeNode<Expression>();
+    *expression = opNode;
+
+    intermediate[i-1] = expression;
+    i -= 2;
+  };
+
+  // See https://en.cppreference.com/w/c/language/operator_precedence
+
+  // group 1
+  for (int32_t i = 1; i < int32_t(intermediate.size()); i += 2)
+  {
+    Op::Type op = std::get<Op::Type>(intermediate[i]);
+    if (op == Op::Type::Call)
+      outputOp(op, i);
+  }
+
+  // group 4
+  for (int32_t i = 1; i < int32_t(intermediate.size()); i += 2)
+  {
+    Op::Type op = std::get<Op::Type>(intermediate[i]);
+    if (op == Op::Type::Add || op == Op::Type::Subtract)
+      outputOp(op, i);
+  }
+
+  // group 7
+  for (int32_t i = 1; i < int32_t(intermediate.size()); i += 2)
+  {
+    Op::Type op = std::get<Op::Type>(intermediate[i]);
+    if (op == Op::Type::CompareEqual)
+      outputOp(op, i);
+  }
+
+  // group 11
+  for (int32_t i = 1; i < int32_t(intermediate.size()); i += 2)
+  {
+    Op::Type op = std::get<Op::Type>(intermediate[i]);
+    if (op == Op::Type::LogicalAnd)
+      outputOp(op, i);
   }
 
   debug_assert(intermediate.size() == 1);

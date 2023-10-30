@@ -14,7 +14,7 @@ std::string inputString = R"STRING_RAW(
     var = 1;
     i32 var2 = 2;
     1;
-    func(var, var2 == 3);
+    func(var, var2 + 3 - 1);
     return 0;
   }
 )STRING_RAW";

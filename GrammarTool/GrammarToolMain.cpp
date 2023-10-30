@@ -158,6 +158,12 @@ const char* wlangGrammarStr = R"STR(
     {{ result.push_back(Op::Type::LogicalAnd); }}
     "&&" Expression<{result}>
   |
+    {{ result.push_back(Op::Type::Add); }}
+    "+" Expression<{result}>
+  |
+    {{ result.push_back(Op::Type::Subtract); }}
+    "-" Expression<{result}>
+  |
     {{ std::vector<Expression*> argList; }}
     "(" CallParamList<{argList}> ")"
     {{
@@ -254,7 +260,7 @@ std::string readWholeFileAsString(const std::filesystem::path& path)
 
   std::string retval;
   retval.resize(size);
-  release_assert(fread(retval.data(), 1, size, f) == size);
+  release_assert(int64_t(fread(retval.data(), 1, size, f)) == size);
 
   fclose(f);
 

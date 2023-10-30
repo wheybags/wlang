@@ -119,6 +119,24 @@ void PlainCGenerator::generate(const Expression* node, std::string& str)
 
     switch (opNode->type)
     {
+      case Op::Type::Add:
+      {
+        str += "(";
+        generate(opNode->left, str);
+        str += " + ";
+        generate(opNode->right, str);
+        str += ")";
+        break;
+      }
+       case Op::Type::Subtract:
+      {
+        str += "(";
+        generate(opNode->left, str);
+        str += " - ";
+        generate(opNode->right, str);
+        str += ")";
+        break;
+      }
       case Op::Type::CompareEqual:
       {
         str += "(";
