@@ -223,6 +223,11 @@ void dumpJson(const Op* node, std::string& str, int32_t tabIndex)
       dumpJson({{"nodeType", "OpLogicalOr"}, {"left", node->left}, {"right", node->right}}, str, tabIndex);
       break;
     }
+     case Op::Type::MemberAccess:
+    {
+      dumpJson({{"nodeType", "OpMemberAccess"}, {"left", node->left}, {"right", node->right}}, str, tabIndex);
+      break;
+    }
     case Op::Type::LogicalNot:
     {
       dumpJson({{"nodeType", "OpLogicalNot"}, {"expression", node->left}}, str, tabIndex);

@@ -12,7 +12,7 @@ std::string inputString = R"STRING_RAW(
   i32 func(i32 x, i32 y)
   {
     Vec2i pos;
-    i32 val = x + 2 * y / 3;
+    i32 val = x + 2 * y / 3 + pos.x;
     return x == 1 && 1 || 1;
   }
 

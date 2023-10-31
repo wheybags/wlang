@@ -27,6 +27,7 @@ struct Token
     Asterisk,
     Divide,
     Class,
+    Dot,
     End
   };
 

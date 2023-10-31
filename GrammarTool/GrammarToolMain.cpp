@@ -228,6 +228,9 @@ const char* wlangGrammarStr = R"STR(
     {{ result.push_back(Op::Type::Divide); }}
     "/" Expression<{result}>
   |
+    {{ result.push_back(Op::Type::MemberAccess); }}
+    "." Expression<{result}>
+  |
     {{ std::vector<Expression*> argList; }}
     "(" CallParamList<{argList}> ")"
     {{

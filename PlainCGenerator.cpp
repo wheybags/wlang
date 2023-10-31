@@ -206,6 +206,15 @@ void PlainCGenerator::generate(const Expression* node, std::string& str)
         str += ")";
         break;
       }
+      case Op::Type::MemberAccess:
+      {
+        str += "(";
+        generate(opNode->left, str);
+        str += ".";
+        generate(opNode->right, str);
+        str += ")";
+        break;
+      }
       case Op::Type::LogicalNot:
       {
         str += "(!";

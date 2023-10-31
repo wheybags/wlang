@@ -109,6 +109,7 @@ Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& inter
       case Op::Type::CompareNotEqual:
       case Op::Type::LogicalAnd:
       case Op::Type::LogicalOr:
+      case Op::Type::MemberAccess:
       {
         opNode->left = std::get<Expression*>(intermediate[i-1]);
         opNode->right = std::get<Expression*>(intermediate[i+1]);
@@ -136,7 +137,7 @@ Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& inter
     if (!std::holds_alternative<Op::Type>(intermediate[i]))
       continue;
     Op::Type op = std::get<Op::Type>(intermediate[i]);
-    if (op == Op::Type::Call)
+    if (op == Op::Type::Call || op == Op::Type::MemberAccess)
       outputOp(op, i);
   }
 

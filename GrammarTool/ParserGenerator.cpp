@@ -101,6 +101,7 @@ ParserSource generateParser(const Grammar& grammar)
     {"\";\"", "Semicolon"},
     {"\"=\"", "Assign"},
     {"\"class\"", "Class"},
+    {"\".\"", "Dot"},
     {"$End", "End"},
   };
 

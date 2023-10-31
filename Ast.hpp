@@ -117,6 +117,7 @@ struct Op
     Subtract,
     Multiply,
     Divide,
+    MemberAccess,
     ENUM_END
   };
 

@@ -24,6 +24,7 @@ const std::vector<std::pair<std::string_view, Token::Type>> keywords
   {"-", Token::Type::Subtract},
   {"*", Token::Type::Asterisk},
   {"/", Token::Type::Divide},
+  {".", Token::Type::Dot},
 };
 
 std::optional<int32_t> parseInt32(std::string_view str)
