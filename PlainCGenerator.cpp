@@ -80,7 +80,19 @@ void PlainCGenerator::generate(const Statement* node, std::string& str)
   else if (std::holds_alternative<VariableDeclaration*>(*node))
   {
     VariableDeclaration* variableDeclaration = std::get<VariableDeclaration*>(*node);
-    str += builtinTypeMapping.at(variableDeclaration->type->name) + " " + variableDeclaration->name;
+    Class* typeClass = variableDeclaration->type->typeClass;
+
+    if (typeClass)
+    {
+      release_assert(!variableDeclaration->initialiser && "not supported yet");
+      str += variableDeclaration->type->name + " " + variableDeclaration->name + ";\n";
+      str += " " + variableDeclaration->type->name + "__init_empty(&" + variableDeclaration->name + ")";
+    }
+    else
+    {
+      str += builtinTypeMapping.at(variableDeclaration->type->name) + " " + variableDeclaration->name;
+    }
+
     if (variableDeclaration->initialiser)
     {
       str += " = ";

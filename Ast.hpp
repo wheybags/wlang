@@ -97,6 +97,9 @@ struct ReturnStatement
 struct Type
 {
   std::string name;
+
+  // user defined types will have a class, builtins have only name
+  Class* typeClass = nullptr;
 };
 
 struct Op

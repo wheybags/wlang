@@ -27,6 +27,9 @@ const char* wlangGrammarStr = R"STR(
     "class" Type
     {{
       Class* newClass = makeNode<Class>();
+      // TODO: assert that class name is not a builtin type
+      release_assert(!v0->typeClass);
+      v0->typeClass = newClass;
       newClass->type = v0;
       funcList->classes.emplace_back(newClass);
     }}
