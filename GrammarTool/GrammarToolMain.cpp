@@ -84,6 +84,22 @@ const char* wlangGrammarStr = R"STR(
       intermediate.push_back(partial);
     }}
     Expression'<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}>
+  |
+    // statement that starts with an expression that starts with logical not (why would you want this? dunno)
+    "!"
+    {{
+      IntermediateExpression intermediate;
+      intermediate.push_back(Op::Type::LogicalNot);
+    }}
+    Expression<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}>
+  |
+    // statement that starts with an expression that starts with unary minus (again, why would you want this?)
+    "-"
+    {{
+      IntermediateExpression intermediate;
+      intermediate.push_back(Op::Type::UnaryMinus);
+    }}
+    Expression<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}>
   ;
     {{ return statement; }}
 
@@ -135,34 +151,57 @@ const char* wlangGrammarStr = R"STR(
     {{ *statement = resolveIntermediateExpression(std::move(intermediateExpression)); }};
 
 
-  Expression <{void}> <{IntermediateExpression& result}>
-    {{ Expression* expression = makeNode<Expression>(); }}
-  =
+  Expression <{void}> <{IntermediateExpression& result}> =
     $Id
     {{
+      Expression* expression = makeNode<Expression>();
       *expression = v0;
       result.push_back(expression);
     }} Expression'<{result}>
   |
     $Int32
     {{
+      Expression* expression = makeNode<Expression>();
       *expression = v0;
       result.push_back(expression);
-    }} Expression'<{result}>;
+    }} Expression'<{result}>
+  |
+    "!"
+    {{
+      result.push_back(Op::Type::LogicalNot);
+    }} Expression<{result}>
+  |
+    "-"
+    {{
+      result.push_back(Op::Type::UnaryMinus);
+    }} Expression<{result}>
+  ;
 
 
   Expression' <{void}> <{IntermediateExpression& result}> =
     {{ result.push_back(Op::Type::CompareEqual); }}
     "==" Expression<{result}>
   |
+    {{ result.push_back(Op::Type::CompareNotEqual); }}
+    "!=" Expression<{result}>
+  |
     {{ result.push_back(Op::Type::LogicalAnd); }}
     "&&" Expression<{result}>
+  |
+    {{ result.push_back(Op::Type::LogicalOr); }}
+    "||" Expression<{result}>
   |
     {{ result.push_back(Op::Type::Add); }}
     "+" Expression<{result}>
   |
     {{ result.push_back(Op::Type::Subtract); }}
     "-" Expression<{result}>
+  |
+    {{ result.push_back(Op::Type::Multiply); }}
+    "*" Expression<{result}>
+  |
+    {{ result.push_back(Op::Type::Divide); }}
+    "/" Expression<{result}>
   |
     {{ std::vector<Expression*> argList; }}
     "(" CallParamList<{argList}> ")"

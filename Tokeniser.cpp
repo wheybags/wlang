@@ -8,7 +8,10 @@ const std::vector<std::pair<std::string_view, Token::Type>> keywords
 {
   {"return", Token::Type::Return},
   {"==", Token::Type::CompareEqual},
+  {"!=", Token::Type::CompareNotEqual},
   {"&&", Token::Type::LogicalAnd},
+  {"||", Token::Type::LogicalOr},
+  {"!", Token::Type::LogicalNot},
   {",", Token::Type::Comma},
   {"(", Token::Type::OpenBracket},
   {")", Token::Type::CloseBracket},
@@ -18,6 +21,8 @@ const std::vector<std::pair<std::string_view, Token::Type>> keywords
   {"=", Token::Type::Assign},
   {"+", Token::Type::Add},
   {"-", Token::Type::Subtract},
+  {"*", Token::Type::Asterisk},
+  {"/", Token::Type::Divide},
 };
 
 std::optional<int32_t> parseInt32(std::string_view str)

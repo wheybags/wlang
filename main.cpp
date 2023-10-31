@@ -5,7 +5,8 @@
 std::string inputString = R"STRING_RAW(
   i32 func(i32 x, i32 y)
   {
-    return x == 1 && 1;
+    i32 val = x + 2 * y / 3;
+    return x == 1 && 1 || 1;
   }
 
   i32 main()
@@ -13,6 +14,9 @@ std::string inputString = R"STRING_RAW(
     i32 var;
     var = 1;
     i32 var2 = 2;
+    i32 aa = 1 != 2;
+    i32 notAa = 2 + !aa + 1;
+    i32 negativeAa = -aa + 12;
     1;
     func(var, var2 + 3 - 1);
     return 0;

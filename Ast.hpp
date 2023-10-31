@@ -96,10 +96,16 @@ struct Op
   enum class Type
   {
     CompareEqual,
+    CompareNotEqual,
     LogicalAnd,
+    LogicalOr,
+    LogicalNot,
+    UnaryMinus,
     Call,
     Add,
     Subtract,
+    Multiply,
+    Divide,
     ENUM_END
   };
 

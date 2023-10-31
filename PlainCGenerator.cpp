@@ -128,11 +128,29 @@ void PlainCGenerator::generate(const Expression* node, std::string& str)
         str += ")";
         break;
       }
-       case Op::Type::Subtract:
+      case Op::Type::Subtract:
       {
         str += "(";
         generate(opNode->left, str);
         str += " - ";
+        generate(opNode->right, str);
+        str += ")";
+        break;
+      }
+      case Op::Type::Multiply:
+      {
+        str += "(";
+        generate(opNode->left, str);
+        str += " * ";
+        generate(opNode->right, str);
+        str += ")";
+        break;
+      }
+      case Op::Type::Divide:
+      {
+        str += "(";
+        generate(opNode->left, str);
+        str += " / ";
         generate(opNode->right, str);
         str += ")";
         break;
@@ -146,12 +164,44 @@ void PlainCGenerator::generate(const Expression* node, std::string& str)
         str += ")";
         break;
       }
+      case Op::Type::CompareNotEqual:
+      {
+        str += "(";
+        generate(opNode->left, str);
+        str += " != ";
+        generate(opNode->right, str);
+        str += ")";
+        break;
+      }
       case Op::Type::LogicalAnd:
       {
         str += "(";
         generate(opNode->left, str);
         str += " && ";
         generate(opNode->right, str);
+        str += ")";
+        break;
+      }
+      case Op::Type::LogicalOr:
+      {
+        str += "(";
+        generate(opNode->left, str);
+        str += " || ";
+        generate(opNode->right, str);
+        str += ")";
+        break;
+      }
+      case Op::Type::LogicalNot:
+      {
+        str += "(!";
+        generate(opNode->left, str);
+        str += ")";
+        break;
+      }
+      case Op::Type::UnaryMinus:
+      {
+        str += "(-";
+        generate(opNode->left, str);
         str += ")";
         break;
       }
@@ -172,8 +222,6 @@ void PlainCGenerator::generate(const Expression* node, std::string& str)
       case Op::Type::ENUM_END:
         message_and_abort("bad enum");
     }
-
-
   }
   else
   {

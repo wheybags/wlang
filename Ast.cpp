@@ -194,14 +194,44 @@ void dumpJson(const Op* node, std::string& str, int32_t tabIndex)
       dumpJson({{"nodeType", "OpSubtract"}, {"left", node->left}, {"right", node->right}}, str, tabIndex);
       break;
     }
+    case Op::Type::Multiply:
+    {
+      dumpJson({{"nodeType", "OpMultiply"}, {"left", node->left}, {"right", node->right}}, str, tabIndex);
+      break;
+    }
+    case Op::Type::Divide:
+    {
+      dumpJson({{"nodeType", "OpDivide"}, {"left", node->left}, {"right", node->right}}, str, tabIndex);
+      break;
+    }
     case Op::Type::CompareEqual:
     {
       dumpJson({{"nodeType", "OpCompareEqual"}, {"left", node->left}, {"right", node->right}}, str, tabIndex);
       break;
     }
+    case Op::Type::CompareNotEqual:
+    {
+      dumpJson({{"nodeType", "OpCompareNotEqual"}, {"left", node->left}, {"right", node->right}}, str, tabIndex);
+      break;
+    }
     case Op::Type::LogicalAnd:
     {
       dumpJson({{"nodeType", "OpLogicalAnd"}, {"left", node->left}, {"right", node->right}}, str, tabIndex);
+      break;
+    }
+    case Op::Type::LogicalOr:
+    {
+      dumpJson({{"nodeType", "OpLogicalOr"}, {"left", node->left}, {"right", node->right}}, str, tabIndex);
+      break;
+    }
+    case Op::Type::LogicalNot:
+    {
+      dumpJson({{"nodeType", "OpLogicalNot"}, {"expression", node->left}}, str, tabIndex);
+      break;
+    }
+    case Op::Type::UnaryMinus:
+    {
+      dumpJson({{"nodeType", "OpUnaryMinus"}, {"expression", node->left}}, str, tabIndex);
       break;
     }
     case Op::Type::Call:

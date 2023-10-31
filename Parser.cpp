@@ -81,62 +81,122 @@ Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& inter
         opNode->left = std::get<Expression*>(intermediate[i-1]);
         opNode->callArgs = std::move(std::get<std::vector<Expression*>>(intermediate[i+1]));
         intermediate.erase(intermediate.begin() + i, intermediate.begin() + (i+2));
+
+        opNode->type = op;
+        Expression* expression = makeNode<Expression>();
+        *expression = opNode;
+        intermediate[i-1] = expression;
+        i -= 2;
+        break;
+      }
+      case Op::Type::LogicalNot:
+      case Op::Type::UnaryMinus:
+      {
+        opNode->left = std::get<Expression*>(intermediate[i+1]);
+        intermediate.erase(intermediate.begin() + i, intermediate.begin() + (i+1));
+
+        opNode->type = op;
+        Expression* expression = makeNode<Expression>();
+        *expression = opNode;
+        intermediate[i] = expression;
         break;
       }
       case Op::Type::Add:
       case Op::Type::Subtract:
+      case Op::Type::Multiply:
+      case Op::Type::Divide:
       case Op::Type::CompareEqual:
+      case Op::Type::CompareNotEqual:
       case Op::Type::LogicalAnd:
+      case Op::Type::LogicalOr:
       {
         opNode->left = std::get<Expression*>(intermediate[i-1]);
         opNode->right = std::get<Expression*>(intermediate[i+1]);
         intermediate.erase(intermediate.begin() + i, intermediate.begin() + (i+2));
+
+        opNode->type = op;
+        Expression* expression = makeNode<Expression>();
+        *expression = opNode;
+        intermediate[i-1] = expression;
+        i -= 2;
         break;
       }
 
       case Op::Type::ENUM_END:
         release_assert(false);
     }
-
-    opNode->type = op;
-    Expression* expression = makeNode<Expression>();
-    *expression = opNode;
-
-    intermediate[i-1] = expression;
-    i -= 2;
   };
 
   // See https://en.cppreference.com/w/c/language/operator_precedence
 
+
   // group 1
-  for (int32_t i = 1; i < int32_t(intermediate.size()); i += 2)
+  for (int32_t i = 1; i < int32_t(intermediate.size()); i++)
   {
+    if (!std::holds_alternative<Op::Type>(intermediate[i]))
+      continue;
     Op::Type op = std::get<Op::Type>(intermediate[i]);
     if (op == Op::Type::Call)
       outputOp(op, i);
   }
 
-  // group 4
-  for (int32_t i = 1; i < int32_t(intermediate.size()); i += 2)
+  // group 2
+  for (int32_t i = int32_t(intermediate.size()) - 1; i >= 0; i--)
   {
+    if (!std::holds_alternative<Op::Type>(intermediate[i]))
+      continue;
+    Op::Type op = std::get<Op::Type>(intermediate[i]);
+    if (op == Op::Type::LogicalNot || op == Op::Type::UnaryMinus)
+      outputOp(op, i);
+  }
+
+  // group 3
+  for (int32_t i = 1; i < int32_t(intermediate.size()); i++)
+  {
+    if (!std::holds_alternative<Op::Type>(intermediate[i]))
+      continue;
+    Op::Type op = std::get<Op::Type>(intermediate[i]);
+    if (op == Op::Type::Multiply || op == Op::Type::Divide)
+      outputOp(op, i);
+  }
+
+  // group 4
+  for (int32_t i = 1; i < int32_t(intermediate.size()); i++)
+  {
+    if (!std::holds_alternative<Op::Type>(intermediate[i]))
+      continue;
     Op::Type op = std::get<Op::Type>(intermediate[i]);
     if (op == Op::Type::Add || op == Op::Type::Subtract)
       outputOp(op, i);
   }
 
   // group 7
-  for (int32_t i = 1; i < int32_t(intermediate.size()); i += 2)
+  for (int32_t i = 1; i < int32_t(intermediate.size()); i++)
   {
+    if (!std::holds_alternative<Op::Type>(intermediate[i]))
+      continue;
     Op::Type op = std::get<Op::Type>(intermediate[i]);
-    if (op == Op::Type::CompareEqual)
+    if (op == Op::Type::CompareEqual || op == Op::Type::CompareNotEqual)
       outputOp(op, i);
   }
 
   // group 11
-  for (int32_t i = 1; i < int32_t(intermediate.size()); i += 2)
+  for (int32_t i = 1; i < int32_t(intermediate.size()); i++)
   {
+    if (!std::holds_alternative<Op::Type>(intermediate[i]))
+      continue;
     Op::Type op = std::get<Op::Type>(intermediate[i]);
     if (op == Op::Type::LogicalAnd)
+      outputOp(op, i);
+  }
+
+  // group 12
+  for (int32_t i = 1; i < int32_t(intermediate.size()); i++)
+  {
+    if (!std::holds_alternative<Op::Type>(intermediate[i]))
+      continue;
+    Op::Type op = std::get<Op::Type>(intermediate[i]);
+    if (op == Op::Type::LogicalOr)
       outputOp(op, i);
   }
 

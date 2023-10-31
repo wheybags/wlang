@@ -15,12 +15,17 @@ struct Token
     OpenBrace,
     CloseBrace,
     CompareEqual,
+    CompareNotEqual,
     LogicalAnd,
+    LogicalOr,
+    LogicalNot,
     Return,
     Semicolon,
     Assign,
     Add,
     Subtract,
+    Asterisk,
+    Divide,
     End
   };
 
