@@ -100,6 +100,7 @@ ParserSource generateParser(const Grammar& grammar)
     {"\"return\"", "Return"},
     {"\";\"", "Semicolon"},
     {"\"=\"", "Assign"},
+    {"\"class\"", "Class"},
     {"$End", "End"},
   };
 

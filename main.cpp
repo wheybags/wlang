@@ -3,6 +3,12 @@
 #include "PlainCGenerator.hpp"
 
 std::string inputString = R"STRING_RAW(
+  class Vec2i
+  {
+    i32 x = 0;
+    i32 y = 0;
+  }
+
   i32 func(i32 x, i32 y)
   {
     i32 val = x + 2 * y / 3;

@@ -26,6 +26,7 @@ struct Token
     Subtract,
     Asterisk,
     Divide,
+    Class,
     End
   };
 

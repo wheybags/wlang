@@ -22,8 +22,30 @@ const char* wlangGrammarStr = R"STR(
 
 
   FuncList <{void}> <{FuncList* funcList}> =
-    Func {{funcList->functions.emplace_back(v0);}} FuncList'<{funcList}>;
+    Func {{funcList->functions.emplace_back(v0);}} FuncList'<{funcList}>
+  |
+    "class" Type
+    {{
+      Class* newClass = makeNode<Class>();
+      newClass->type = v0;
+      funcList->classes.emplace_back(newClass);
+    }}
+    "{" ClassMemberList<{newClass}> "}"
+    FuncList'<{funcList}>
+  ;
 
+  ClassMemberList <{void}> <{Class* newClass}> =
+    Type $Id TheRestOfADeclaration
+    {{
+      VariableDeclaration* variableDeclaration = makeNode<VariableDeclaration>();
+      variableDeclaration->type = v0;
+      variableDeclaration->name = v1;
+      variableDeclaration->initialiser = v2;
+      newClass->memberVariables.emplace_back(variableDeclaration);
+    }}
+    ";" ClassMemberList<{newClass}>
+  |
+    Nil;
 
   FuncList' <{void}> <{FuncList* funcList}> =
     FuncList<{funcList}> | Nil;

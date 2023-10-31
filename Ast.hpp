@@ -8,6 +8,7 @@
 struct Root;
 struct FuncList;
 struct Func;
+struct Class;
 struct Block;
 struct VariableDeclaration;
 struct Assignment;
@@ -40,6 +41,7 @@ struct Root
 struct FuncList
 {
   std::vector<Func*> functions;
+  std::vector<Class*> classes;
 };
 
 struct Func
@@ -48,6 +50,12 @@ struct Func
   std::string name;
   ArgList* argList = nullptr;
   Block* funcBody = nullptr;
+};
+
+struct Class
+{
+  Type* type = nullptr;
+  std::vector<VariableDeclaration*> memberVariables;
 };
 
 struct ArgList
@@ -136,7 +144,8 @@ struct Scope
   X(ArgList) \
   X(Arg) \
   X(Expression) \
-  X(Op)
+  X(Op) \
+  X(Class)
 
 # define X(Type) void dumpJson(const Type* node, std::string& str, int32_t tabIndex = 0);
 FOR_EACH_AST_TYPE

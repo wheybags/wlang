@@ -14,11 +14,13 @@ private:
   void generate(const Func* node, int32_t tabIndex);
   void generate(const Statement* node, std::string& str);
   void generate(const Expression* node, std::string& str);
+  void generate(const Class* node);
 
 private:
   std::string headers;
   std::string functionPrototypes;
   std::string functionBodies;
+  std::string classes;
 };
 
 

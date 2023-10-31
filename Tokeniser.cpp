@@ -7,6 +7,7 @@
 const std::vector<std::pair<std::string_view, Token::Type>> keywords
 {
   {"return", Token::Type::Return},
+  {"class", Token::Type::Class},
   {"==", Token::Type::CompareEqual},
   {"!=", Token::Type::CompareNotEqual},
   {"&&", Token::Type::LogicalAnd},

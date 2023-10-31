@@ -12,7 +12,7 @@ PlainCGenerator::PlainCGenerator()
 std::string PlainCGenerator::generate(const Root *root)
 {
   generate(root, 0);
-  return headers + "\n" + functionPrototypes + "\n" + functionBodies;
+  return headers + "\n" + classes + functionPrototypes + "\n" + functionBodies;
 }
 
 static const std::unordered_map<std::string, std::string> builtinTypeMapping
@@ -28,6 +28,9 @@ void PlainCGenerator::generate(const Root* node, int32_t tabIndex)
 
 void PlainCGenerator::generate(const FuncList* node, int32_t tabIndex)
 {
+  for (Class* c : node->classes)
+    generate(c);
+
   for (Func* func : node->functions)
     generate(func, tabIndex);
 }
@@ -227,5 +230,31 @@ void PlainCGenerator::generate(const Expression* node, std::string& str)
   {
     message_and_abort("bad Expression");
   }
+}
+
+void PlainCGenerator::generate(const Class* node)
+{
+  this->classes += "struct " + node->type->name + "\n";
+  this->classes += "{\n";
+
+  this->functionPrototypes += "void " + node->type->name + "__init_empty(" + node->type->name + "* obj);\n";
+  this->functionBodies += "void " + node->type->name + "__init_empty(" + node->type->name + "* obj)\n{\n";
+
+  for (int32_t i = 0; i < int32_t(node->memberVariables.size()); i++)
+  {
+    this->classes += "  ";
+
+    VariableDeclaration* variableDeclaration = node->memberVariables[i];
+    this->classes += builtinTypeMapping.at(variableDeclaration->type->name) + " " + variableDeclaration->name;
+
+    this->functionBodies += "  obj->" + variableDeclaration->name + " = ";
+    generate(variableDeclaration->initialiser, this->functionBodies);
+    this->functionBodies += ";\n";
+
+    this->classes += ";\n";
+  }
+
+  this->functionBodies += "}\n\n";
+  this->classes += "};\n\n";
 }
 

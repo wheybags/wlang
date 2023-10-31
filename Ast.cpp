@@ -3,11 +3,10 @@
 #include <vector>
 
 using Value = std::variant<
-# define X(Type) Type*,
+# define X(Type) Type*, std::vector<Type*>,
   FOR_EACH_AST_TYPE
 # undef X
 
-  std::vector<Expression*>,
   std::string,
   int32_t>;
 
@@ -20,12 +19,12 @@ void dumpJson(const Value& value, std::string& str, int32_t tabIndex)
     str += "\"" + std::get<std::string>(value) + "\"";
   else if (std::holds_alternative<int32_t>(value))
     str += std::to_string(std::get<int32_t>(value));
-  else if (std::holds_alternative<std::vector<Expression*>>(value))
-    dumpJson(std::get<std::vector<Expression*>>(value), str, tabIndex);
 
 # define X(Type) \
   else if (std::holds_alternative<Type*>(value)) \
-    dumpJson(std::get<Type*>(value), str, tabIndex);
+    dumpJson(std::get<Type*>(value), str, tabIndex); \
+  else if (std::holds_alternative<std::vector<Type*>>(value)) \
+    dumpJson(std::get<std::vector<Type*>>(value), str, tabIndex);
 
   FOR_EACH_AST_TYPE
 #undef X
@@ -106,7 +105,7 @@ void dumpJson(const Statement* node, std::string& str, int32_t tabIndex)
 
 void dumpJson(const Root* node, std::string& str, int32_t tabIndex)
 {
-  dumpJson({{"nodeType", "Root"}, {"funcList", node->funcList}}, str, tabIndex);
+  dumpJson({{"nodeType", "Root"}, {"funcList", node->funcList}, {"classes", node->funcList->classes}}, str, tabIndex);
 }
 
 void dumpJson(const FuncList* node, std::string& str, int32_t tabIndex)
@@ -242,5 +241,10 @@ void dumpJson(const Op* node, std::string& str, int32_t tabIndex)
     case Op::Type::ENUM_END:
       release_assert(false);
   }
-
 }
+
+void dumpJson(const Class* node, std::string& str, int32_t tabIndex)
+{
+  dumpJson({{"nodeType", "Class"}, {"type", node->type}, {"memberVariables", node->memberVariables}}, str, tabIndex);
+}
+
