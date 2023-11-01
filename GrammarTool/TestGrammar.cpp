@@ -59,8 +59,8 @@ void test_first()
         A = "2" | Nil;
   )STR");
   release_assert(rules.first("Root") == vvs{{"\"3\""}});
-  release_assert((rules.first("A") == vvs{{"\"2\""}, {"Nil"}}));
-  release_assert((rules.first("Y") == vvs{{"\"2\"", "Nil"}, {"\"1\""}}));
+  release_assert((rules.first("A") == vvs{{"\"2\""}, {}}));
+  release_assert((rules.first("Y") == vvs{{"\"2\""}, {"\"1\""}}));
 
   rules = Grammar(R"STR(
       Root = "3" Y $End;
@@ -79,11 +79,11 @@ void test_first()
       C = "3";
       D = "4" | Nil;
   )STR");
-  release_assert((rules.first("A") == vvs{{"\"1\""}, {"Nil"}}));
-  release_assert((rules.first("B") == vvs{{"\"2\""}, {"Nil"}}));
+  release_assert((rules.first("A") == vvs{{"\"1\""}, {}}));
+  release_assert((rules.first("B") == vvs{{"\"2\""}, {}}));
   release_assert(rules.first("C") == vvs{{"\"3\""}});
-  release_assert((rules.first("D") == vvs{{"\"4\""}, {"Nil"}}));
-  release_assert((rules.first("Y") == vvs{{"\"1\"", "Nil", "\"2\"", "\"3\""}}));
+  release_assert((rules.first("D") == vvs{{"\"4\""}, {}}));
+  release_assert((rules.first("Y") == vvs{{"\"1\"", "\"2\"", "\"3\""}}));
 
   rules = Grammar(R"STR(
       Root = "x" Y $End;
@@ -93,11 +93,19 @@ void test_first()
       C = "3" | Nil;
       D = "4" | Nil;
   )STR");
-  release_assert((rules.first("A") == vvs{{"\"1\""}, {"Nil"}}));
-  release_assert((rules.first("B") == vvs{{"\"2\""}, {"Nil"}}));
-  release_assert((rules.first("C") == vvs{{"\"3\""}, {"Nil"}}));
-  release_assert((rules.first("D") == vvs{{"\"4\""}, {"Nil"}}));
-  release_assert((rules.first("Y") == vvs{{"\"1\"", "Nil", "\"2\"", "\"3\"", "\"4\""}}));
+  release_assert((rules.first("A") == vvs{{"\"1\""}, {}}));
+  release_assert((rules.first("B") == vvs{{"\"2\""}, {}}));
+  release_assert((rules.first("C") == vvs{{"\"3\""}, {}}));
+  release_assert((rules.first("D") == vvs{{"\"4\""}, {}}));
+  release_assert((rules.first("Y") == vvs{{"\"1\"", "\"2\"", "\"3\"", "\"4\""}}));
+
+  rules = Grammar(R"STR(
+      Root = A "X" | B "Y";
+      A = "1" | Nil;
+      B = "2" | Nil;
+  )STR");
+
+  release_assert((rules.first("Root") == vvs{{"\"1\"", "\"X\""}, {"\"2\"", "\"Y\""}}));
 }
 
 using ss = std::unordered_set<std::string>;

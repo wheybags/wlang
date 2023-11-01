@@ -18,6 +18,12 @@ struct ArgList;
 struct Arg;
 struct Op;
 
+struct TypeRef
+{
+  Type* type = nullptr;
+  int32_t pointerDepth = 0;
+};
+
 struct Scope;
 
 using Expression = std::variant<std::monostate,
@@ -46,7 +52,7 @@ struct FuncList
 
 struct Func
 {
-  Type* returnType = nullptr;
+  TypeRef returnType;
   std::string name;
   ArgList* argList = nullptr;
   Block* funcBody = nullptr;
@@ -66,7 +72,7 @@ struct ArgList
 
 struct Arg
 {
-  Type* type = nullptr;
+  TypeRef type;
   std::string name;
 };
 
@@ -78,7 +84,7 @@ struct Block
 
 struct VariableDeclaration
 {
-  Type* type = nullptr;
+  TypeRef type;
   std::string name;
   Expression* initialiser = nullptr; // maybe null
 };

@@ -24,7 +24,7 @@ const char* wlangGrammarStr = R"STR(
   FuncList <{void}> <{FuncList* funcList}> =
     Func {{funcList->functions.emplace_back(v0);}} FuncList'<{funcList}>
   |
-    "class" Type
+    "class" BaseType
     {{
       Class* newClass = makeNode<Class>();
       // TODO: assert that class name is not a builtin type
@@ -131,10 +131,12 @@ const char* wlangGrammarStr = R"STR(
 
   StatementThatStartsWithId <{void}> <{const std::string& id, Statement* statement}> =
     // declaration
-    $Id TheRestOfADeclaration
     {{
       VariableDeclaration* variableDeclaration = makeNode<VariableDeclaration>();
-      variableDeclaration->type = getType(id);
+      variableDeclaration->type = TypeRef { .type = getType(id) };
+    }}
+    Type'<{variableDeclaration->type}> $Id TheRestOfADeclaration
+    {{
       variableDeclaration->name = v0;
       variableDeclaration->initialiser = v1;
       *statement = variableDeclaration;
@@ -147,7 +149,14 @@ const char* wlangGrammarStr = R"STR(
       IntermediateExpression intermediate;
       intermediate.push_back(partial);
     }}
-    Expression'<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}>;
+    // The statement A*b is ambiguous - is it a multiplication or pointer declaration?
+    // Here we resolve the ambiguity - it's a pointer declaration. We do this by using a special version
+    // of the Expression' rule that has no multiply operator.
+    // Maybe one day I will add a fancy selection based on whether A exists as a variable, but TBH it's a kinda
+    // useless construct so I probably won't.
+    Expression'NoMul<{intermediate}>
+    TheRestOfAStatement<{std::move(intermediate), statement}>;
+
 
   TheRestOfADeclaration <{Expression*}> =
     {{ IntermediateExpression intermediateExpression; }}
@@ -203,7 +212,7 @@ const char* wlangGrammarStr = R"STR(
   ;
 
 
-  Expression' <{void}> <{IntermediateExpression& result}> =
+  Expression'NoMul <{void}> <{IntermediateExpression& result}> =
     {{ result.push_back(Op::Type::CompareEqual); }}
     "==" Expression<{result}>
   |
@@ -222,9 +231,6 @@ const char* wlangGrammarStr = R"STR(
     {{ result.push_back(Op::Type::Subtract); }}
     "-" Expression<{result}>
   |
-    {{ result.push_back(Op::Type::Multiply); }}
-    "*" Expression<{result}>
-  |
     {{ result.push_back(Op::Type::Divide); }}
     "/" Expression<{result}>
   |
@@ -240,6 +246,14 @@ const char* wlangGrammarStr = R"STR(
   |
     Nil;
 
+
+  Expression' <{void}> <{IntermediateExpression& result}> =
+    {{ result.push_back(Op::Type::Multiply); }}
+    "*" Expression<{result}>
+  |
+    Expression'NoMul<{result}>
+  ;
+
   CallParamList <{void}> <{std::vector<Expression*>& argList}> =
     {{ IntermediateExpression intermediateExpression; }}
     Expression<{intermediateExpression}>
@@ -253,9 +267,20 @@ const char* wlangGrammarStr = R"STR(
   |
     Nil;
 
-  Type <{Type*}> =
-    $Id {{ return getType(v0); }};
+  Type <{TypeRef}> =
+    BaseType
+    {{ TypeRef retval{ .type = v0 }; }}
+    Type'<{retval}>
+    {{ return retval; }}
+  ;
 
+  Type' <{void}> <{TypeRef& typeRef}> =
+    "*" {{ typeRef.pointerDepth++; }} Type'<{typeRef}>
+  |
+    Nil;
+
+  BaseType <{Type*}> =
+    $Id {{ return getType(v0); }};
 
   ArgList <{ArgList*}> =
     Arg

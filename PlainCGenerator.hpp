@@ -15,6 +15,7 @@ private:
   void generate(const Statement* node, std::string& str);
   void generate(const Expression* node, std::string& str);
   void generate(const Class* node);
+  std::string strType(const TypeRef& type);
 
 private:
   std::string headers;

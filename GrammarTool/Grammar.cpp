@@ -340,7 +340,7 @@ std::vector<std::vector<std::string>> Grammar::first(const std::string& name) co
     std::vector<std::string> prod_firsts;
     auto prod_firsts_append = [&](const std::string& sym)
     {
-      if (sym == "Nil" && std::find(prod_firsts.begin(), prod_firsts.end(), "Nil") != prod_firsts.end())
+      if (sym == "Nil")
         return;
       prod_firsts.emplace_back(sym);
     };
@@ -365,8 +365,7 @@ std::vector<std::vector<std::string>> Grammar::first(const std::string& name) co
         break;
     }
 
-    if (!prod_firsts.empty())
-      retval.emplace_back(std::move(prod_firsts));
+    retval.emplace_back(std::move(prod_firsts));
   }
 
   // check for duplicates

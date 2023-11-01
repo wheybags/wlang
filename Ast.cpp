@@ -2,16 +2,20 @@
 #include "Assert.hpp"
 #include <vector>
 
+void dumpJson(const TypeRef* typeRef, std::string& str, int32_t tabIndex = 0);
+
 using Value = std::variant<
-# define X(Type) Type*, std::vector<Type*>,
+# define X(Type) const Type*, std::vector<Type*>,
   FOR_EACH_AST_TYPE
 # undef X
 
+  const TypeRef*,
   std::string,
   int32_t>;
 
 template <typename T>
 void dumpJson(const std::vector<T>& values, std::string& str, int32_t tabIndex);
+
 
 void dumpJson(const Value& value, std::string& str, int32_t tabIndex)
 {
@@ -19,10 +23,12 @@ void dumpJson(const Value& value, std::string& str, int32_t tabIndex)
     str += "\"" + std::get<std::string>(value) + "\"";
   else if (std::holds_alternative<int32_t>(value))
     str += std::to_string(std::get<int32_t>(value));
+  else if (std::holds_alternative<const TypeRef*>(value))
+   dumpJson(std::get<const TypeRef*>(value), str, tabIndex);
 
 # define X(Type) \
-  else if (std::holds_alternative<Type*>(value)) \
-    dumpJson(std::get<Type*>(value), str, tabIndex); \
+  else if (std::holds_alternative<const Type*>(value)) \
+    dumpJson(std::get<const Type*>(value), str, tabIndex); \
   else if (std::holds_alternative<std::vector<Type*>>(value)) \
     dumpJson(std::get<std::vector<Type*>>(value), str, tabIndex);
 
@@ -122,7 +128,7 @@ void dumpJson(const Func* node, std::string& str, int32_t tabIndex)
   dumpJson(
   {
     {"nodeType", "Func"},
-    {"returnType", node->returnType},
+    {"returnType", &node->returnType},
     {"name", node->name},
     {"argList", node->argList},
     {"funcBody", node->funcBody}
@@ -142,7 +148,7 @@ void dumpJson(const ArgList* node, std::string& str, int32_t tabIndex)
 
 void dumpJson(const Arg* node, std::string& str, int32_t tabIndex)
 {
-  dumpJson({{"nodeType", "Arg"}, {"type", node->type}, {"name", node->name}}, str, tabIndex);
+  dumpJson({{"nodeType", "Arg"}, {"type", &node->type}, {"name", node->name}}, str, tabIndex);
 }
 
 void dumpJson(const Block* node, std::string& str, int32_t tabIndex)
@@ -156,7 +162,7 @@ void dumpJson(const Block* node, std::string& str, int32_t tabIndex)
 
 void dumpJson(const VariableDeclaration* node, std::string& str, int32_t tabIndex)
 {
-  std::vector<std::pair<std::string, Value>> values {{"nodeType", "VariableDeclaration"}, {"type", node->type}, {"name", node->name}};
+  std::vector<std::pair<std::string, Value>> values {{"nodeType", "VariableDeclaration"}, {"type", &node->type}, {"name", node->name}};
   if (node->initialiser)
     values.emplace_back("initialiser", node->initialiser);
   dumpJson(values, str, tabIndex);
@@ -253,3 +259,7 @@ void dumpJson(const Class* node, std::string& str, int32_t tabIndex)
   dumpJson({{"nodeType", "Class"}, {"type", node->type}, {"memberVariables", node->memberVariables}}, str, tabIndex);
 }
 
+void dumpJson(const TypeRef* typeRef, std::string& str, int32_t tabIndex)
+{
+  dumpJson({{"nodeType", "TypeRef"}, {"type", typeRef->type}, {"pointerDepth", typeRef->pointerDepth}}, str, tabIndex);
+}

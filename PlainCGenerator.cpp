@@ -39,12 +39,12 @@ void PlainCGenerator::generate(const Func* node, int32_t tabIndex)
 {
   std::string prototype;
   {
-    prototype = builtinTypeMapping.at(node->returnType->name) + " " + node->name + "(";
+    prototype = strType(node->returnType) + " " + node->name + "(";
 
     ArgList *argNode = node->argList;
     while (argNode)
     {
-      prototype += builtinTypeMapping.at(argNode->arg->type->name) + " " + argNode->arg->name + ", ";
+      prototype += strType(argNode->arg->type) + " " + argNode->arg->name + ", ";
       argNode = argNode->next;
     }
 
@@ -80,17 +80,17 @@ void PlainCGenerator::generate(const Statement* node, std::string& str)
   else if (std::holds_alternative<VariableDeclaration*>(*node))
   {
     VariableDeclaration* variableDeclaration = std::get<VariableDeclaration*>(*node);
-    Class* typeClass = variableDeclaration->type->typeClass;
+    Class* typeClass = variableDeclaration->type.pointerDepth == 0 ? variableDeclaration->type.type->typeClass : nullptr;
 
     if (typeClass)
     {
       release_assert(!variableDeclaration->initialiser && "not supported yet");
-      str += variableDeclaration->type->name + " " + variableDeclaration->name + ";\n";
-      str += " " + variableDeclaration->type->name + "__init_empty(&" + variableDeclaration->name + ")";
+      str += strType(variableDeclaration->type) + " " + variableDeclaration->name + ";\n";
+      str += " " + strType(variableDeclaration->type) + "__init_empty(&" + variableDeclaration->name + ")";
     }
     else
     {
-      str += builtinTypeMapping.at(variableDeclaration->type->name) + " " + variableDeclaration->name;
+      str += strType(variableDeclaration->type) + " " + variableDeclaration->name;
     }
 
     if (variableDeclaration->initialiser)
@@ -266,7 +266,7 @@ void PlainCGenerator::generate(const Class* node)
     this->classes += "  ";
 
     VariableDeclaration* variableDeclaration = node->memberVariables[i];
-    this->classes += builtinTypeMapping.at(variableDeclaration->type->name) + " " + variableDeclaration->name;
+    this->classes += strType(variableDeclaration->type) + " " + variableDeclaration->name;
 
     this->functionBodies += "  obj->" + variableDeclaration->name + " = ";
     generate(variableDeclaration->initialiser, this->functionBodies);
@@ -277,5 +277,20 @@ void PlainCGenerator::generate(const Class* node)
 
   this->functionBodies += "}\n\n";
   this->classes += "};\n\n";
+}
+
+std::string PlainCGenerator::strType(const TypeRef& type)
+{
+  std::string str;
+
+  if (type.type->typeClass)
+    str += type.type->name;
+  else
+    str += builtinTypeMapping.at(type.type->name);
+
+  for (int i = 0; i < type.pointerDepth; i++)
+    str += "*";
+
+  return str;
 }
 
