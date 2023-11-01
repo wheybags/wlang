@@ -13,7 +13,12 @@ class Parser
 public:
   Parser();
 
-  const Root* parse(const std::vector<Token>& tokens);
+  Root* parse(const std::vector<Token>& tokens);
+  Type* getType(const std::string& typeName);
+
+public:
+  Type* tInt32 = nullptr;
+  Type* tBool = nullptr;
 
 private:
   template<typename T> T* makeNode();
@@ -23,7 +28,7 @@ private:
   Expression* resolveIntermediateExpression(IntermediateExpression&& intermediate);
   std::string parseId(ParseContext& ctx);
   int32_t parseInt32(ParseContext& ctx);
-  Type* getType(const std::string& typeName);
+  Type* getOrCreateType(const std::string& typeName);
 
 #include "ParserRulesDeclarations.inl"
 

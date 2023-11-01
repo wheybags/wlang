@@ -60,12 +60,8 @@ private:
 
 Parser::Parser()
 {
-  for (const auto& name: {"i32", "bool"})
-  {
-    Type* type = makeNode<Type>();
-    type->name = name;
-    types[name] = type;
-  }
+  tInt32 = getOrCreateType("i32");
+  tBool = getOrCreateType("bool");
 }
 
 Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& intermediate)
@@ -205,7 +201,7 @@ Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& inter
   return std::get<Expression*>(intermediate[0]);
 }
 
-const Root* Parser::parse(const std::vector<Token>& tokenStrings)
+Root* Parser::parse(const std::vector<Token>& tokenStrings)
 {
   ParseContext tokens(tokenStrings.data(), tokenStrings.size());
   return parseRoot(tokens);
@@ -237,7 +233,7 @@ int32_t Parser::parseInt32(ParseContext& ctx)
   return ctx.pop().i32Value;
 }
 
-Type* Parser::getType(const std::string& typeName)
+Type* Parser::getOrCreateType(const std::string& typeName)
 {
   auto it = types.find(typeName);
 
@@ -252,6 +248,16 @@ Type* Parser::getType(const std::string& typeName)
   {
     return it->second;
   }
+}
+
+Type* Parser::getType(const std::string& typeName)
+{
+  auto it = types.find(typeName);
+
+  if (it == types.end())
+    return nullptr;
+  else
+    return it->second;
 }
 
 #include "ParserRules.inl"

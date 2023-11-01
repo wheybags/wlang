@@ -41,11 +41,12 @@ void PlainCGenerator::generate(const Func* node, int32_t tabIndex)
   {
     prototype = strType(node->returnType) + " " + node->name + "(";
 
-    ArgList *argNode = node->argList;
-    while (argNode)
+    for (const std::string& name : node->argsOrder)
     {
-      prototype += strType(argNode->arg->type) + " " + argNode->arg->name + ", ";
-      argNode = argNode->next;
+      ScopeItem item = node->argsScope->lookup(name);
+      release_assert(item.isVariable());
+      generate(item.variable(), prototype);
+      prototype += ", ";
     }
 
     if (Str::endsWith(prototype, ", "))
@@ -79,25 +80,7 @@ void PlainCGenerator::generate(const Statement* node, std::string& str)
   }
   else if (std::holds_alternative<VariableDeclaration*>(*node))
   {
-    VariableDeclaration* variableDeclaration = std::get<VariableDeclaration*>(*node);
-    Class* typeClass = variableDeclaration->type.pointerDepth == 0 ? variableDeclaration->type.type->typeClass : nullptr;
-
-    if (typeClass)
-    {
-      release_assert(!variableDeclaration->initialiser && "not supported yet");
-      str += strType(variableDeclaration->type) + " " + variableDeclaration->name + ";\n";
-      str += " " + strType(variableDeclaration->type) + "__init_empty(&" + variableDeclaration->name + ")";
-    }
-    else
-    {
-      str += strType(variableDeclaration->type) + " " + variableDeclaration->name;
-    }
-
-    if (variableDeclaration->initialiser)
-    {
-      str += " = ";
-      generate(variableDeclaration->initialiser, str);
-    }
+    generate(std::get<VariableDeclaration*>(*node), str);
   }
   else if (std::holds_alternative<Assignment*>(*node))
   {
@@ -118,19 +101,41 @@ void PlainCGenerator::generate(const Statement* node, std::string& str)
   str += ";";
 }
 
+void PlainCGenerator::generate(const VariableDeclaration* variableDeclaration, std::string& str)
+{
+  Class* typeClass = variableDeclaration->type.pointerDepth == 0 ? variableDeclaration->type.type->typeClass : nullptr;
+
+  if (typeClass)
+  {
+    release_assert(!variableDeclaration->initialiser && "not supported yet");
+    str += strType(variableDeclaration->type) + " " + variableDeclaration->name + ";\n";
+    str += " " + strType(variableDeclaration->type) + "__init_empty(&" + variableDeclaration->name + ")";
+  }
+  else
+  {
+    str += strType(variableDeclaration->type) + " " + variableDeclaration->name;
+  }
+
+  if (variableDeclaration->initialiser)
+  {
+    str += " = ";
+    generate(variableDeclaration->initialiser, str);
+  }
+}
+
 void PlainCGenerator::generate(const Expression* node, std::string& str)
 {
-  if (std::holds_alternative<std::string>(*node))
+  if (node->isId())
   {
-    str += std::get<std::string>(*node);
+    str += node->id();
   }
-  else if (std::holds_alternative<int32_t>(*node))
+  else if (node->isInt32())
   {
-    str += std::to_string(std::get<int32_t>(*node));
+    str += std::to_string(node->int32());
   }
-  else if (std::holds_alternative<Op*>(*node))
+  else if (node->isOp())
   {
-    const Op* opNode = std::get<Op*>(*node);
+    const Op* opNode = node->op();
 
     switch (opNode->type)
     {
@@ -210,7 +215,12 @@ void PlainCGenerator::generate(const Expression* node, std::string& str)
       {
         str += "(";
         generate(opNode->left, str);
-        str += ".";
+
+        if (opNode->left->type.pointerDepth == 0)
+          str += ".";
+        else
+          str += "->";
+
         generate(opNode->right, str);
         str += ")";
         break;
@@ -261,11 +271,11 @@ void PlainCGenerator::generate(const Class* node)
   this->functionPrototypes += "void " + node->type->name + "__init_empty(" + node->type->name + "* obj);\n";
   this->functionBodies += "void " + node->type->name + "__init_empty(" + node->type->name + "* obj)\n{\n";
 
-  for (int32_t i = 0; i < int32_t(node->memberVariables.size()); i++)
+  for (const std::string& name : node->memberVariableOrder)
   {
     this->classes += "  ";
 
-    VariableDeclaration* variableDeclaration = node->memberVariables[i];
+    VariableDeclaration* variableDeclaration = node->memberVariables.at(name);
     this->classes += strType(variableDeclaration->type) + " " + variableDeclaration->name;
 
     this->functionBodies += "  obj->" + variableDeclaration->name + " = ";

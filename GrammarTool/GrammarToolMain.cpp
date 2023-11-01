@@ -12,17 +12,25 @@ const char* wlangGrammarStr = R"STR(
   Root <{Root*}> =
     {{
       Root* rootNode = makeNode<Root>();
-      rootNode->rootScope = makeNode<Scope>();
-      ctx.pushScope(rootNode->rootScope);
       rootNode->funcList = makeNode<FuncList>();
+
+      rootNode->funcList->scope = makeNode<Scope>();
+      ctx.pushScope(rootNode->funcList->scope);
+
     }} FuncList<{rootNode->funcList}> $End
     {{
+      ctx.popScope();
       return rootNode;
     }};
 
 
-  FuncList <{void}> <{FuncList* funcList}> =
-    Func {{funcList->functions.emplace_back(v0);}} FuncList'<{funcList}>
+  FuncList <{void}> <{FuncList* funcList}>  =
+    Func
+    {{
+      funcList->functions.emplace_back(v0);
+      funcList->scope->variables.insert_or_assign(v0->name, v0);
+    }}
+    FuncList'<{funcList}>
   |
     "class" BaseType
     {{
@@ -44,11 +52,13 @@ const char* wlangGrammarStr = R"STR(
       variableDeclaration->type = v0;
       variableDeclaration->name = v1;
       variableDeclaration->initialiser = v2;
-      newClass->memberVariables.emplace_back(variableDeclaration);
+      newClass->memberVariableOrder.emplace_back(variableDeclaration->name);
+      newClass->memberVariables.insert_or_assign(variableDeclaration->name, variableDeclaration);
     }}
     ";" ClassMemberList<{newClass}>
   |
-    Nil;
+    Nil
+  ;
 
   FuncList' <{void}> <{FuncList* funcList}> =
     FuncList<{funcList}> | Nil;
@@ -58,20 +68,32 @@ const char* wlangGrammarStr = R"STR(
     Type $Id
     {{
       Func* func = makeNode<Func>();
+      func->argsScope = makeNode<Scope>();
       func->returnType = v0;
       func->name = std::move(v1);
-    }} "(" Func'<{func}>
-    {{ return func; }};
-
-
-  Func' <{void}> <{Func* func}> =
-    ArgList {{ func->argList = v0; }} ")" Block {{ func->funcBody = v1; }}
-  |
-    ")" Block {{ func->funcBody = v0; }};
-
+    }}
+    "(" ArgList<{func}> ")" Block
+    {{
+      func->funcBody = v2;
+      func->funcBody->scope->parent2 = func->argsScope;
+      return func;
+    }}
+  ;
 
   Block <{Block*}> =
-    "{" {{ Block* block = makeNode<Block>(); }} StatementList<{block}> "}" {{ return block; }};
+    "{"
+    {{
+      Block* block = makeNode<Block>();
+      block->scope = makeNode<Scope>();
+      block->scope->parent = ctx.getScope();
+      ctx.pushScope(block->scope);
+    }}
+    StatementList<{block}> "}"
+    {{
+      ctx.popScope();
+      return block;
+    }}
+  ;
 
 
   StatementList <{void}> <{Block* block}> =
@@ -133,12 +155,13 @@ const char* wlangGrammarStr = R"STR(
     // declaration
     {{
       VariableDeclaration* variableDeclaration = makeNode<VariableDeclaration>();
-      variableDeclaration->type = TypeRef { .type = getType(id) };
+      variableDeclaration->type = TypeRef { .type = getOrCreateType(id) };
     }}
     Type'<{variableDeclaration->type}> $Id TheRestOfADeclaration
     {{
       variableDeclaration->name = v0;
       variableDeclaration->initialiser = v1;
+      ctx.getScope()->variables.insert_or_assign(variableDeclaration->name, variableDeclaration);
       *statement = variableDeclaration;
     }}
   |
@@ -280,28 +303,29 @@ const char* wlangGrammarStr = R"STR(
     Nil;
 
   BaseType <{Type*}> =
-    $Id {{ return getType(v0); }};
+    $Id {{ return getOrCreateType(v0); }};
 
-  ArgList <{ArgList*}> =
+  ArgList <{void}> <{Func* func}> =
     Arg
     {{
-      ArgList* argList = makeNode<ArgList>();
-      argList->arg = v0;
+      func->argsOrder.emplace_back(v0->name);
+      func->argsScope->variables.insert_or_assign(v0->name, v0);
     }}
-    ArgList'<{argList}>
-    {{ return argList; }};
-
-
-  ArgList' <{void}> <{ArgList* argList}> =
-    "," ArgList {{ argList->next = v0; }}
+    ArgList'<{func}>
   |
-    Nil;
+    Nil
+  ;
 
+  ArgList' <{void}> <{Func* func}> =
+    "," ArgList<{func}>
+  |
+    Nil
+  ;
 
-  Arg <{Arg*}> =
+  Arg <{VariableDeclaration*}> =
     Type $Id
     {{
-      Arg* arg = makeNode<Arg>();
+      VariableDeclaration* arg = makeNode<VariableDeclaration>();
       arg->type = v0;
       arg->name = v1;
       return arg;

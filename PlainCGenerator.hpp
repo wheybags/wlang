@@ -14,6 +14,7 @@ private:
   void generate(const Func* node, int32_t tabIndex);
   void generate(const Statement* node, std::string& str);
   void generate(const Expression* node, std::string& str);
+  void generate(const VariableDeclaration* variableDeclaration, std::string& str);
   void generate(const Class* node);
   std::string strType(const TypeRef& type);
 

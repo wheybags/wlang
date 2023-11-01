@@ -85,12 +85,12 @@ void dumpJson(const std::vector<T>& values, std::string& str, int32_t tabIndex)
 
 void dumpJson(const Expression* node, std::string& str, int32_t tabIndex)
 {
-  if (std::holds_alternative<std::string>(*node))
-    dumpJson(std::get<std::string>(*node), str, tabIndex);
-  else if (std::holds_alternative<int32_t>(*node))
-    dumpJson(std::get<int32_t>(*node), str, tabIndex);
-  else if (std::holds_alternative<Op*>(*node))
-    dumpJson(std::get<Op*>(*node), str, tabIndex);
+  if (node->isId())
+    dumpJson(node->id(), str, tabIndex);
+  else if (node->isInt32())
+    dumpJson(node->int32(), str, tabIndex);
+  else if (node->isOp())
+    dumpJson(node->op(), str, tabIndex);
   else
     message_and_abort("empty expression");
 }
@@ -125,30 +125,19 @@ void dumpJson(const FuncList* node, std::string& str, int32_t tabIndex)
 
 void dumpJson(const Func* node, std::string& str, int32_t tabIndex)
 {
+  std::vector<VariableDeclaration*> values;
+  values.reserve(node->argsOrder.size());
+  for (const std::string& name : node->argsOrder)
+    values.emplace_back(node->argsScope->lookup(name).variable());
+
   dumpJson(
   {
     {"nodeType", "Func"},
     {"returnType", &node->returnType},
     {"name", node->name},
-    {"argList", node->argList},
+    {"argList", values},
     {"funcBody", node->funcBody}
   }, str, tabIndex);
-}
-
-void dumpJson(const ArgList* node, std::string& str, int32_t tabIndex)
-{
-  std::vector<Value> values;
-  while (node)
-  {
-    values.push_back(node->arg);
-    node = node->next;
-  }
-  dumpJson(values, str, tabIndex);
-}
-
-void dumpJson(const Arg* node, std::string& str, int32_t tabIndex)
-{
-  dumpJson({{"nodeType", "Arg"}, {"type", &node->type}, {"name", node->name}}, str, tabIndex);
 }
 
 void dumpJson(const Block* node, std::string& str, int32_t tabIndex)
@@ -256,10 +245,38 @@ void dumpJson(const Op* node, std::string& str, int32_t tabIndex)
 
 void dumpJson(const Class* node, std::string& str, int32_t tabIndex)
 {
-  dumpJson({{"nodeType", "Class"}, {"type", node->type}, {"memberVariables", node->memberVariables}}, str, tabIndex);
+  std::vector<VariableDeclaration*> memberVariables;
+  memberVariables.reserve(node->memberVariables.size());
+  for (const auto& pair : node->memberVariables)
+    memberVariables.emplace_back(pair.second);
+
+  dumpJson({{"nodeType", "Class"}, {"type", node->type}, {"memberVariables", memberVariables}}, str, tabIndex);
 }
 
 void dumpJson(const TypeRef* typeRef, std::string& str, int32_t tabIndex)
 {
   dumpJson({{"nodeType", "TypeRef"}, {"type", typeRef->type}, {"pointerDepth", typeRef->pointerDepth}}, str, tabIndex);
+}
+
+ScopeItem Scope::lookup(const std::string& name)
+{
+  auto it = this->variables.find(name);
+  if (it != this->variables.end())
+    return it->second;
+
+  if (this->parent2)
+  {
+    ScopeItem item = this->parent2->lookup(name);
+    if (item)
+      return item;
+  }
+
+  if (this->parent)
+  {
+    ScopeItem item = this->parent->lookup(name);
+    if (item)
+      return item;
+  }
+
+  return {};
 }

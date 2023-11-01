@@ -1,24 +1,28 @@
 #include "Tokeniser.hpp"
 #include "Parser.hpp"
 #include "PlainCGenerator.hpp"
+#include "SemanticAnalyser.hpp"
 
 std::string inputString = R"STRING_RAW(
-  i32 ff()
+  i32 ff(Vec2i* vec)
   {
-    i32* ptr;
+    vec.x = 1;
+    Vec2i vec2;
+    func(1,2);
+    return vec2.x;
   }
 
   class Vec2i
   {
-    i32 x = 0;
+    i32 x = 0 + 23;
     i32 y = 0;
   }
 
-  i32 func(i32 x, i32 y)
+  bool func(i32 x, i32 y)
   {
     Vec2i pos;
     i32 val = x + 2 * y / 3 + pos.x;
-    return x == 1 && 1 || 1;
+    return x == 1 && 1 == 1 || 1 == 1;
   }
 
   i32 main()
@@ -26,9 +30,9 @@ std::string inputString = R"STRING_RAW(
     i32 var;
     var = 1;
     i32 var2 = 2;
-    i32 aa = 1 != 2;
-    i32 notAa = 2 + !aa + 1;
-    i32 negativeAa = -aa + 12;
+    bool aa = 1 != 2;
+    bool notAa = !aa;
+    i32 negative = -var2 + 12;
     1;
     func(var, var2 + 3 - 1);
     return 0;
@@ -39,12 +43,15 @@ int main()
 {
   std::vector<Token> tokens = tokenise(inputString);
   Parser parser;
-  const Root* ast = parser.parse(tokens);
+  Root* ast = parser.parse(tokens);
 
   std::string json;
   dumpJson(ast, json);
   puts(json.c_str());
   puts("\n");
+
+  SemanticAnalyser semanticAnalyser(parser);
+  semanticAnalyser.run(ast);
 
   PlainCGenerator generator;
   puts(generator.generate(ast).c_str());
