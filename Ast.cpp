@@ -105,6 +105,8 @@ void dumpJson(const Statement* node, std::string& str, int32_t tabIndex)
     dumpJson(std::get<Assignment*>(*node), str, tabIndex);
   else if (std::holds_alternative<Expression*>(*node))
     dumpJson(std::get<Expression*>(*node), str, tabIndex);
+  else if (std::holds_alternative<IfElseChain*>(*node))
+    dumpJson(std::get<IfElseChain*>(*node), str, tabIndex);
   else
     message_and_abort("empty expression");
 }
@@ -256,6 +258,22 @@ void dumpJson(const Class* node, std::string& str, int32_t tabIndex)
 void dumpJson(const TypeRef* typeRef, std::string& str, int32_t tabIndex)
 {
   dumpJson({{"nodeType", "TypeRef"}, {"type", typeRef->type}, {"pointerDepth", typeRef->pointerDepth}}, str, tabIndex);
+}
+
+void dumpJson(const IfElseChain* ifElseChain, std::string& str, int32_t tabIndex)
+{
+  dumpJson({{"nodeType", "IfElseChain"}, {"items", ifElseChain->items}}, str, tabIndex);
+}
+
+void dumpJson(const IfElseChainItem* ifElseChainItem, std::string& str, int32_t tabIndex)
+{
+  std::vector<std::pair<std::string, Value>> values;
+  values.emplace_back("nodeType", "IfElseChainItem");
+  if (ifElseChainItem->condition)
+    values.emplace_back("condition", ifElseChainItem->condition);
+  values.emplace_back("block", ifElseChainItem->block);
+
+  dumpJson(values, str, tabIndex);
 }
 
 ScopeItem Scope::lookup(const std::string& name)

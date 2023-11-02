@@ -19,6 +19,7 @@ private:
   void run(Assignment* assignment);
   void run(VariableDeclaration* variableDeclaration);
   void run(ReturnStatement* returnStatement, Func* func);
+  void run(IfElseChain* ifElseChain, Func* func);
 
 private:
   Parser& parser;

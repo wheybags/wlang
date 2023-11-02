@@ -28,6 +28,8 @@ struct Token
     Divide,
     Class,
     Dot,
+    If,
+    Else,
     End
   };
 

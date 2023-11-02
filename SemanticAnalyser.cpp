@@ -31,6 +31,7 @@ void SemanticAnalyser::run(Class* classN)
   {
     VariableDeclaration* variableDeclaration = pair.second;
     run(variableDeclaration);
+    release_assert(variableDeclaration->type.type != classN->type || variableDeclaration->type.pointerDepth > 0);
   }
 }
 
@@ -44,6 +45,8 @@ void SemanticAnalyser::run(Statement* statement, Func* func)
     run(std::get<Assignment*>(*statement));
   else if (std::holds_alternative<Expression*>(*statement))
     run(std::get<Expression*>(*statement));
+  else if (std::holds_alternative<IfElseChain*>(*statement))
+    run(std::get<IfElseChain*>(*statement), func);
   else
     message_and_abort("bad statement");
 }
@@ -185,5 +188,25 @@ void SemanticAnalyser::run(ReturnStatement* returnStatement, Func* func)
 {
   run(returnStatement->retval);
   release_assert(returnStatement->retval->type == func->returnType);
+}
+
+void SemanticAnalyser::run(IfElseChain* ifElseChain, Func* func)
+{
+  for (int32_t i = 0; i < int32_t(ifElseChain->items.size()); i++)
+  {
+    IfElseChainItem* item = ifElseChain->items[i];
+
+    if (item->condition)
+    {
+      run(item->condition);
+      release_assert(item->condition->type == TypeRef{ .type = this->parser.tBool });
+    }
+    else
+    {
+      release_assert(ifElseChain->items.size() > 1 && i == int32_t(ifElseChain->items.size()) - 1);
+    }
+
+    run(item->block, func);
+  }
 }
 

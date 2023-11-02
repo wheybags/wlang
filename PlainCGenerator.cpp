@@ -6,13 +6,13 @@
 
 PlainCGenerator::PlainCGenerator()
 {
-  headers = "#include <stdint.h>\n";
+  headers.appendLine("#include <stdint.h>");
 }
 
 std::string PlainCGenerator::generate(const Root *root)
 {
-  generate(root, 0);
-  return headers + "\n" + classes + functionPrototypes + "\n" + functionBodies;
+  generate(root->funcList);
+  return headers.str + "\n" + classes.str + functionPrototypes.str + "\n" + functionBodies.str;
 }
 
 static const std::unordered_map<std::string, std::string> builtinTypeMapping
@@ -21,21 +21,16 @@ static const std::unordered_map<std::string, std::string> builtinTypeMapping
   {"bool", "bool"}
 };
 
-void PlainCGenerator::generate(const Root* node, int32_t tabIndex)
-{
-  generate(node->funcList, tabIndex);
-}
-
-void PlainCGenerator::generate(const FuncList* node, int32_t tabIndex)
+void PlainCGenerator::generate(const FuncList* node)
 {
   for (Class* c : node->classes)
     generate(c);
 
   for (Func* func : node->functions)
-    generate(func, tabIndex);
+    generate(func);
 }
 
-void PlainCGenerator::generate(const Func* node, int32_t tabIndex)
+void PlainCGenerator::generate(const Func* node)
 {
   std::string prototype;
   {
@@ -45,7 +40,7 @@ void PlainCGenerator::generate(const Func* node, int32_t tabIndex)
     {
       ScopeItem item = node->argsScope->lookup(name);
       release_assert(item.isVariable());
-      generate(item.variable(), prototype);
+      prototype += generate(item.variable());
       prototype += ", ";
     }
 
@@ -55,61 +50,84 @@ void PlainCGenerator::generate(const Func* node, int32_t tabIndex)
     prototype += ")";
   }
 
-  functionPrototypes += prototype + ";\n";
+  functionPrototypes.appendLine(prototype + ";");
 
-  functionBodies += Str::space(tabIndex) + prototype + "\n{\n";
-  tabIndex++;
-  {
-    for (const Statement* statement : node->funcBody->statements)
-    {
-      functionBodies += Str::space(tabIndex);
-      generate(statement, functionBodies);
-      functionBodies += "\n";
-    }
-  }
-  tabIndex--;
-  functionBodies += "}\n\n";
+  functionBodies.appendLine(prototype);
+  generate(node->funcBody, functionBodies);
+  functionBodies.appendLine();
 }
 
-void PlainCGenerator::generate(const Statement* node, std::string& str)
+void PlainCGenerator::generate(const Block* block, OutputString& str)
+{
+  str.appendLine("{");
+  {
+    for (const Statement* statement : block->statements)
+      generate(statement, str);
+  }
+  str.appendLine("}");
+}
+
+void PlainCGenerator::generate(const Statement* node, OutputString& str)
 {
   if (std::holds_alternative<ReturnStatement*>(*node))
   {
-    str += "return ";
-    generate(std::get<ReturnStatement*>(*node)->retval, str);
+    str.appendLine("return " + generate(std::get<ReturnStatement*>(*node)->retval) + ";");
   }
   else if (std::holds_alternative<VariableDeclaration*>(*node))
   {
-    generate(std::get<VariableDeclaration*>(*node), str);
+    str.appendLine(generate(std::get<VariableDeclaration*>(*node)) + ";");
   }
   else if (std::holds_alternative<Assignment*>(*node))
   {
     Assignment* assignment = std::get<Assignment*>(*node);
-    generate(assignment->left, str);
-    str += " = ";
-    generate(assignment->right, str);
+    str.appendLine(generate(assignment->left) + " = " +  generate(assignment->right) + ";");
   }
   else if (std::holds_alternative<Expression*>(*node))
   {
-    generate(std::get<Expression*>(*node), str);
+    str.appendLine(generate(std::get<Expression*>(*node)) + ";");
+  }
+  else if (std::holds_alternative<IfElseChain*>(*node))
+  {
+    IfElseChain* ifElseChain = std::get<IfElseChain*>(*node);
+    for (int32_t i = 0; i < int32_t(ifElseChain->items.size()); i++)
+    {
+      IfElseChainItem* item = ifElseChain->items[i];
+
+      std::string line;
+      if (i == 0)
+        line += "if";
+      else if (item->condition)
+        line += "else if";
+      else
+        line += "else";
+
+      if (item->condition)
+      {
+        line += " (";
+        line += generate(item->condition);
+        line += ")";
+      }
+
+      str.appendLine(line);
+      generate(item->block, str);
+    }
   }
   else
   {
     message_and_abort("bad Statement");
   }
-
-  str += ";";
 }
 
-void PlainCGenerator::generate(const VariableDeclaration* variableDeclaration, std::string& str)
+std::string PlainCGenerator::generate(const VariableDeclaration* variableDeclaration)
 {
   Class* typeClass = variableDeclaration->type.pointerDepth == 0 ? variableDeclaration->type.type->typeClass : nullptr;
 
+  std::string str;
   if (typeClass)
   {
     release_assert(!variableDeclaration->initialiser && "not supported yet");
-    str += strType(variableDeclaration->type) + " " + variableDeclaration->name + ";\n";
-    str += " " + strType(variableDeclaration->type) + "__init_empty(&" + variableDeclaration->name + ")";
+    str += strType(variableDeclaration->type) + " " + variableDeclaration->name + "; ";
+    str += strType(variableDeclaration->type) + "__init_empty(&" + variableDeclaration->name + ")";
   }
   else
   {
@@ -119,12 +137,16 @@ void PlainCGenerator::generate(const VariableDeclaration* variableDeclaration, s
   if (variableDeclaration->initialiser)
   {
     str += " = ";
-    generate(variableDeclaration->initialiser, str);
+    str += generate(variableDeclaration->initialiser);
   }
+
+  return str;
 }
 
-void PlainCGenerator::generate(const Expression* node, std::string& str)
+std::string PlainCGenerator::generate(const Expression* node)
 {
+  std::string str;
+
   if (node->isId())
   {
     str += node->id();
@@ -142,111 +164,111 @@ void PlainCGenerator::generate(const Expression* node, std::string& str)
       case Op::Type::Add:
       {
         str += "(";
-        generate(opNode->left, str);
+        str += generate(opNode->left);
         str += " + ";
-        generate(opNode->right, str);
+        str += generate(opNode->right);
         str += ")";
         break;
       }
       case Op::Type::Subtract:
       {
         str += "(";
-        generate(opNode->left, str);
+        str += generate(opNode->left);
         str += " - ";
-        generate(opNode->right, str);
+        str += generate(opNode->right);
         str += ")";
         break;
       }
       case Op::Type::Multiply:
       {
         str += "(";
-        generate(opNode->left, str);
+        str += generate(opNode->left);
         str += " * ";
-        generate(opNode->right, str);
+        str += generate(opNode->right);
         str += ")";
         break;
       }
       case Op::Type::Divide:
       {
         str += "(";
-        generate(opNode->left, str);
+        str += generate(opNode->left);
         str += " / ";
-        generate(opNode->right, str);
+        str += generate(opNode->right);
         str += ")";
         break;
       }
       case Op::Type::CompareEqual:
       {
         str += "(";
-        generate(opNode->left, str);
+        str += generate(opNode->left);
         str += " == ";
-        generate(opNode->right, str);
+        str += generate(opNode->right);
         str += ")";
         break;
       }
       case Op::Type::CompareNotEqual:
       {
         str += "(";
-        generate(opNode->left, str);
+        str += generate(opNode->left);
         str += " != ";
-        generate(opNode->right, str);
+        str += generate(opNode->right);
         str += ")";
         break;
       }
       case Op::Type::LogicalAnd:
       {
         str += "(";
-        generate(opNode->left, str);
+        str += generate(opNode->left);
         str += " && ";
-        generate(opNode->right, str);
+        str += generate(opNode->right);
         str += ")";
         break;
       }
       case Op::Type::LogicalOr:
       {
         str += "(";
-        generate(opNode->left, str);
+        str += generate(opNode->left);
         str += " || ";
-        generate(opNode->right, str);
+        str += generate(opNode->right);
         str += ")";
         break;
       }
       case Op::Type::MemberAccess:
       {
         str += "(";
-        generate(opNode->left, str);
+        str += generate(opNode->left);
 
         if (opNode->left->type.pointerDepth == 0)
           str += ".";
         else
           str += "->";
 
-        generate(opNode->right, str);
+        str += generate(opNode->right);
         str += ")";
         break;
       }
       case Op::Type::LogicalNot:
       {
         str += "(!";
-        generate(opNode->left, str);
+        str += generate(opNode->left);
         str += ")";
         break;
       }
       case Op::Type::UnaryMinus:
       {
         str += "(-";
-        generate(opNode->left, str);
+        str += generate(opNode->left);
         str += ")";
         break;
       }
       case Op::Type::Call:
       {
         str += "(";
-        generate(opNode->left, str);
+        str += generate(opNode->left);
         str += ")(";
         for (int32_t i = 0; i < int32_t(opNode->callArgs.size()); i++)
         {
-          generate(opNode->callArgs[i], str);
+          str += generate(opNode->callArgs[i]);
           if (i != int32_t(opNode->callArgs.size()) - 1)
             str += ", ";
         }
@@ -261,32 +283,29 @@ void PlainCGenerator::generate(const Expression* node, std::string& str)
   {
     message_and_abort("bad Expression");
   }
+
+  return str;
 }
 
 void PlainCGenerator::generate(const Class* node)
 {
-  this->classes += "struct " + node->type->name + "\n";
-  this->classes += "{\n";
+  this->classes.appendLine("struct " + node->type->name);
+  this->classes.appendLine("{");
 
-  this->functionPrototypes += "void " + node->type->name + "__init_empty(" + node->type->name + "* obj);\n";
-  this->functionBodies += "void " + node->type->name + "__init_empty(" + node->type->name + "* obj)\n{\n";
+  this->functionPrototypes.appendLine("void " + node->type->name + "__init_empty(" + node->type->name + "* obj);");
+  this->functionBodies.appendLine("void " + node->type->name + "__init_empty(" + node->type->name + "* obj)");
+  this->functionBodies.appendLine("{");
 
   for (const std::string& name : node->memberVariableOrder)
   {
-    this->classes += "  ";
-
     VariableDeclaration* variableDeclaration = node->memberVariables.at(name);
-    this->classes += strType(variableDeclaration->type) + " " + variableDeclaration->name;
-
-    this->functionBodies += "  obj->" + variableDeclaration->name + " = ";
-    generate(variableDeclaration->initialiser, this->functionBodies);
-    this->functionBodies += ";\n";
-
-    this->classes += ";\n";
+    this->classes.appendLine(strType(variableDeclaration->type) + " " + variableDeclaration->name + ";");
+    this->functionBodies.appendLine("obj->" + variableDeclaration->name + " = " + generate(variableDeclaration->initialiser));
   }
 
-  this->functionBodies += "}\n\n";
-  this->classes += "};\n\n";
+  this->functionBodies.appendLine("}");
+  this->classes.appendLine("};");
+  this->classes.appendLine();
 }
 
 std::string PlainCGenerator::strType(const TypeRef& type)

@@ -22,6 +22,20 @@ std::string inputString = R"STRING_RAW(
   {
     Vec2i pos;
     i32 val = x + 2 * y / 3 + pos.x;
+
+    if (1 == 1)
+    {
+      return 1 == 1;
+    }
+    else if (1 == 2)
+    {
+      return 1 == 2;
+    }
+    else
+    {
+      return 1 != 1;
+    }
+
     return x == 1 && 1 == 1 || 1 == 1;
   }
 

@@ -97,7 +97,7 @@ const char* wlangGrammarStr = R"STR(
 
 
   StatementList <{void}> <{Block* block}> =
-    Statement {{ block->statements.push_back(v0); }} ";" StatementList'<{block}>;
+    Statement {{ block->statements.push_back(v0); }} StatementList'<{block}>;
 
 
   StatementList' <{void}> <{Block* block}> =
@@ -111,16 +111,20 @@ const char* wlangGrammarStr = R"STR(
       ReturnStatement* returnStatement = makeNode<ReturnStatement>();
       IntermediateExpression intermediate;
     }}
-    "return" Expression<{intermediate}>
+    "return" Expression<{intermediate}> ";"
     {{
       returnStatement->retval = resolveIntermediateExpression(std::move(intermediate));
       *statement = returnStatement;
     }}
   |
+    {{ IfElseChain* ifElseChain = makeNode<IfElseChain>(); }}
+    "if" TheRestOfAnIf<{*ifElseChain}>
+    {{ *statement = ifElseChain; }}
+  |
     // declaration, or an expression that starts with $Id
     // This awkwardness exists because declarations (and assignments) are not expressions, which is a design choice
     // We basically need to copy paste the rules from Expression into Statement, so we can allow any expression as a statement
-    $Id StatementThatStartsWithId <{v0, statement}>
+    $Id StatementThatStartsWithId <{v0, statement}> ";"
   |
     // statement that starts with an expression that starts with $Int32
     $Int32
@@ -130,7 +134,7 @@ const char* wlangGrammarStr = R"STR(
       IntermediateExpression intermediate;
       intermediate.push_back(partial);
     }}
-    Expression'<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}>
+    Expression'<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}> ";"
   |
     // statement that starts with an expression that starts with logical not (why would you want this? dunno)
     "!"
@@ -138,7 +142,7 @@ const char* wlangGrammarStr = R"STR(
       IntermediateExpression intermediate;
       intermediate.push_back(Op::Type::LogicalNot);
     }}
-    Expression<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}>
+    Expression<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}> ";"
   |
     // statement that starts with an expression that starts with unary minus (again, why would you want this?)
     "-"
@@ -146,9 +150,44 @@ const char* wlangGrammarStr = R"STR(
       IntermediateExpression intermediate;
       intermediate.push_back(Op::Type::UnaryMinus);
     }}
-    Expression<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}>
+    Expression<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}> ";"
   ;
     {{ return statement; }}
+
+
+  TheRestOfAnIf <{void}> <{IfElseChain& chain}>
+  =
+    {{ IntermediateExpression intermediate; }}
+    "(" Expression<{intermediate}> ")" Block
+    {{
+      IfElseChainItem* item = makeNode<IfElseChainItem>();
+      item->condition = resolveIntermediateExpression(std::move(intermediate));
+      item->block = v0;
+      chain.items.emplace_back(item);
+    }}
+    TheRestOfAnIf'<{chain}>
+  ;
+
+
+  TheRestOfAnIf' <{void}> <{IfElseChain& chain}>
+  =
+    "else" TheRestOfAnIf''<{chain}>
+  |
+    Nil
+  ;
+
+
+  TheRestOfAnIf'' <{void}> <{IfElseChain& chain}>
+  =
+    "if" TheRestOfAnIf<{chain}>
+  |
+    Block
+    {{
+      IfElseChainItem* item = makeNode<IfElseChainItem>();
+      item->block = v0;
+      chain.items.emplace_back(item);
+    }}
+  ;
 
 
   StatementThatStartsWithId <{void}> <{const std::string& id, Statement* statement}> =

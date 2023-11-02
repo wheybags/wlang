@@ -16,6 +16,8 @@ struct Assignment;
 struct ReturnStatement;
 struct Type;
 struct Op;
+struct IfElseChain;
+struct IfElseChainItem;
 
 struct TypeRef
 {
@@ -70,7 +72,8 @@ using Statement = std::variant<std::monostate,
   ReturnStatement*,
   VariableDeclaration*,
   Assignment*,
-  Expression*>;
+  Expression*,
+  IfElseChain*>;
 
 struct Root
 {
@@ -159,6 +162,17 @@ struct Op
   Type type = Type::ENUM_END;
 };
 
+struct IfElseChain
+{
+  std::vector<IfElseChainItem*> items;
+};
+
+struct IfElseChainItem
+{
+  Expression* condition = nullptr;
+  Block* block = nullptr;
+};
+
 struct ScopeItem
 {
   enum class Tag
@@ -214,7 +228,9 @@ struct Scope
   X(Type) \
   X(Expression) \
   X(Op) \
-  X(Class)
+  X(Class) \
+  X(IfElseChain) \
+  X(IfElseChainItem)
 
 # define X(Type) void dumpJson(const Type* node, std::string& str, int32_t tabIndex = 0);
 FOR_EACH_AST_TYPE

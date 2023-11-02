@@ -1,5 +1,6 @@
 #pragma once
 #include "Ast.hpp"
+#include "OutputString.hpp"
 
 class PlainCGenerator
 {
@@ -9,20 +10,20 @@ public:
   std::string generate(const Root* root);
 
 private:
-  void generate(const Root* node, int32_t tabIndex);
-  void generate(const FuncList* node, int32_t tabIndex);
-  void generate(const Func* node, int32_t tabIndex);
-  void generate(const Statement* node, std::string& str);
-  void generate(const Expression* node, std::string& str);
-  void generate(const VariableDeclaration* variableDeclaration, std::string& str);
+  void generate(const FuncList* node);
+  void generate(const Func* node);
+  void generate(const Block* block, OutputString& str);
+  void generate(const Statement* node, OutputString& str);
+  std::string generate(const Expression* node);
+  std::string generate(const VariableDeclaration* variableDeclaration);
   void generate(const Class* node);
   std::string strType(const TypeRef& type);
 
 private:
-  std::string headers;
-  std::string functionPrototypes;
-  std::string functionBodies;
-  std::string classes;
+  OutputString headers;
+  OutputString functionPrototypes;
+  OutputString functionBodies;
+  OutputString classes;
 };
 
 
