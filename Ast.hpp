@@ -38,22 +38,26 @@ public:
     None,
     Id,
     Int32,
+    Bool,
     Op,
   };
 
   Expression() = default;
   Expression(std::string id) : _id(std::move(id)), _tag(Id) {}
   Expression(int32_t i32) : _i32(i32), _tag(Int32) {}
+  Expression(bool b) : _bool(b), _tag(Bool) {}
   Expression(struct Op* op) : _op(op), _tag(Op) {}
 
   Tag tag() const { return _tag; }
 
   bool isId() const { return _tag == Id; }
   bool isInt32() const { return _tag == Int32; }
+  bool isBool() const { return _tag == Bool; }
   bool isOp() const { return _tag == Op; }
 
   const std::string& id() const { release_assert(isId()); return _id; }
   int32_t int32() const { release_assert(isInt32()); return _i32; }
+  bool boolean() const { release_assert(isBool()); return _bool; }
   const struct Op* op() const { release_assert(isOp()); return _op; }
   struct Op* op() { release_assert(isOp()); return _op; }
 
@@ -65,6 +69,7 @@ private:
 
   std::string _id;
   int32_t _i32 = 0;
+  bool _bool = false;
   struct Op* _op = nullptr;
 };
 

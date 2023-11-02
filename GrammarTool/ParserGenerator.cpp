@@ -104,6 +104,8 @@ ParserSource generateParser(const Grammar& grammar)
     {"\".\"", "Dot"},
     {"\"if\"", "If"},
     {"\"else\"", "Else"},
+    {"\"true\"", "True"},
+    {"\"false\"", "False"},
     {"$End", "End"},
   };
 

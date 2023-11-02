@@ -6,6 +6,8 @@
 std::string inputString = R"STRING_RAW(
   i32 ff(Vec2i* vec)
   {
+    false;
+    bool a = true;
     vec.x = 1;
     Vec2i vec2;
     func(1,2);

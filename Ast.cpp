@@ -11,7 +11,8 @@ using Value = std::variant<
 
   const TypeRef*,
   std::string,
-  int32_t>;
+  int32_t,
+  bool>;
 
 template <typename T>
 void dumpJson(const std::vector<T>& values, std::string& str, int32_t tabIndex);
@@ -23,6 +24,8 @@ void dumpJson(const Value& value, std::string& str, int32_t tabIndex)
     str += "\"" + std::get<std::string>(value) + "\"";
   else if (std::holds_alternative<int32_t>(value))
     str += std::to_string(std::get<int32_t>(value));
+  else if (std::holds_alternative<bool>(value))
+    str += std::get<bool>(value) ? "true" : "false";
   else if (std::holds_alternative<const TypeRef*>(value))
    dumpJson(std::get<const TypeRef*>(value), str, tabIndex);
 
@@ -85,14 +88,23 @@ void dumpJson(const std::vector<T>& values, std::string& str, int32_t tabIndex)
 
 void dumpJson(const Expression* node, std::string& str, int32_t tabIndex)
 {
-  if (node->isId())
-    dumpJson(node->id(), str, tabIndex);
-  else if (node->isInt32())
-    dumpJson(node->int32(), str, tabIndex);
-  else if (node->isOp())
-    dumpJson(node->op(), str, tabIndex);
-  else
-    message_and_abort("empty expression");
+  switch(node->tag())
+  {
+    case Expression::Id:
+      dumpJson(node->id(), str, tabIndex);
+      break;
+    case Expression::Int32:
+      dumpJson(node->int32(), str, tabIndex);
+      break;
+    case Expression::Bool:
+      dumpJson(node->boolean(), str, tabIndex);
+      break;
+    case Expression::Op:
+      dumpJson(node->op(), str, tabIndex);
+      break;
+    case Expression::None:
+      message_and_abort("empty expression");
+  }
 }
 
 void dumpJson(const Statement* node, std::string& str, int32_t tabIndex)

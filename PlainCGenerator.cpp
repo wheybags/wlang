@@ -147,141 +147,155 @@ std::string PlainCGenerator::generate(const Expression* node)
 {
   std::string str;
 
-  if (node->isId())
+  switch(node->tag())
   {
-    str += node->id();
-  }
-  else if (node->isInt32())
-  {
-    str += std::to_string(node->int32());
-  }
-  else if (node->isOp())
-  {
-    const Op* opNode = node->op();
-
-    switch (opNode->type)
+    case Expression::Id:
     {
-      case Op::Type::Add:
-      {
-        str += "(";
-        str += generate(opNode->left);
-        str += " + ";
-        str += generate(opNode->right);
-        str += ")";
-        break;
-      }
-      case Op::Type::Subtract:
-      {
-        str += "(";
-        str += generate(opNode->left);
-        str += " - ";
-        str += generate(opNode->right);
-        str += ")";
-        break;
-      }
-      case Op::Type::Multiply:
-      {
-        str += "(";
-        str += generate(opNode->left);
-        str += " * ";
-        str += generate(opNode->right);
-        str += ")";
-        break;
-      }
-      case Op::Type::Divide:
-      {
-        str += "(";
-        str += generate(opNode->left);
-        str += " / ";
-        str += generate(opNode->right);
-        str += ")";
-        break;
-      }
-      case Op::Type::CompareEqual:
-      {
-        str += "(";
-        str += generate(opNode->left);
-        str += " == ";
-        str += generate(opNode->right);
-        str += ")";
-        break;
-      }
-      case Op::Type::CompareNotEqual:
-      {
-        str += "(";
-        str += generate(opNode->left);
-        str += " != ";
-        str += generate(opNode->right);
-        str += ")";
-        break;
-      }
-      case Op::Type::LogicalAnd:
-      {
-        str += "(";
-        str += generate(opNode->left);
-        str += " && ";
-        str += generate(opNode->right);
-        str += ")";
-        break;
-      }
-      case Op::Type::LogicalOr:
-      {
-        str += "(";
-        str += generate(opNode->left);
-        str += " || ";
-        str += generate(opNode->right);
-        str += ")";
-        break;
-      }
-      case Op::Type::MemberAccess:
-      {
-        str += "(";
-        str += generate(opNode->left);
-
-        if (opNode->left->type.pointerDepth == 0)
-          str += ".";
-        else
-          str += "->";
-
-        str += generate(opNode->right);
-        str += ")";
-        break;
-      }
-      case Op::Type::LogicalNot:
-      {
-        str += "(!";
-        str += generate(opNode->left);
-        str += ")";
-        break;
-      }
-      case Op::Type::UnaryMinus:
-      {
-        str += "(-";
-        str += generate(opNode->left);
-        str += ")";
-        break;
-      }
-      case Op::Type::Call:
-      {
-        str += "(";
-        str += generate(opNode->left);
-        str += ")(";
-        for (int32_t i = 0; i < int32_t(opNode->callArgs.size()); i++)
-        {
-          str += generate(opNode->callArgs[i]);
-          if (i != int32_t(opNode->callArgs.size()) - 1)
-            str += ", ";
-        }
-        str += ")";
-        break;
-      }
-      case Op::Type::ENUM_END:
-        message_and_abort("bad enum");
+      str += node->id();
+      break;
     }
-  }
-  else
-  {
-    message_and_abort("bad Expression");
+
+    case Expression::Int32:
+    {
+      str += std::to_string(node->int32());
+      break;
+    }
+
+    case Expression::Bool:
+    {
+      str += node->boolean() ? "true" : "false";
+      break;
+    }
+
+    case Expression::Op:
+    {
+      const Op* opNode = node->op();
+
+      switch (opNode->type)
+      {
+        case Op::Type::Add:
+        {
+          str += "(";
+          str += generate(opNode->left);
+          str += " + ";
+          str += generate(opNode->right);
+          str += ")";
+          break;
+        }
+        case Op::Type::Subtract:
+        {
+          str += "(";
+          str += generate(opNode->left);
+          str += " - ";
+          str += generate(opNode->right);
+          str += ")";
+          break;
+        }
+        case Op::Type::Multiply:
+        {
+          str += "(";
+          str += generate(opNode->left);
+          str += " * ";
+          str += generate(opNode->right);
+          str += ")";
+          break;
+        }
+        case Op::Type::Divide:
+        {
+          str += "(";
+          str += generate(opNode->left);
+          str += " / ";
+          str += generate(opNode->right);
+          str += ")";
+          break;
+        }
+        case Op::Type::CompareEqual:
+        {
+          str += "(";
+          str += generate(opNode->left);
+          str += " == ";
+          str += generate(opNode->right);
+          str += ")";
+          break;
+        }
+        case Op::Type::CompareNotEqual:
+        {
+          str += "(";
+          str += generate(opNode->left);
+          str += " != ";
+          str += generate(opNode->right);
+          str += ")";
+          break;
+        }
+        case Op::Type::LogicalAnd:
+        {
+          str += "(";
+          str += generate(opNode->left);
+          str += " && ";
+          str += generate(opNode->right);
+          str += ")";
+          break;
+        }
+        case Op::Type::LogicalOr:
+        {
+          str += "(";
+          str += generate(opNode->left);
+          str += " || ";
+          str += generate(opNode->right);
+          str += ")";
+          break;
+        }
+        case Op::Type::MemberAccess:
+        {
+          str += "(";
+          str += generate(opNode->left);
+
+          if (opNode->left->type.pointerDepth == 0)
+            str += ".";
+          else
+            str += "->";
+
+          str += generate(opNode->right);
+          str += ")";
+          break;
+        }
+        case Op::Type::LogicalNot:
+        {
+          str += "(!";
+          str += generate(opNode->left);
+          str += ")";
+          break;
+        }
+        case Op::Type::UnaryMinus:
+        {
+          str += "(-";
+          str += generate(opNode->left);
+          str += ")";
+          break;
+        }
+        case Op::Type::Call:
+        {
+          str += "(";
+          str += generate(opNode->left);
+          str += ")(";
+          for (int32_t i = 0; i < int32_t(opNode->callArgs.size()); i++)
+          {
+            str += generate(opNode->callArgs[i]);
+            if (i != int32_t(opNode->callArgs.size()) - 1)
+              str += ", ";
+          }
+          str += ")";
+          break;
+        }
+        case Op::Type::ENUM_END:
+          message_and_abort("bad enum");
+      }
+
+      break;
+    }
+
+    case Expression::None:
+      release_assert(false);
   }
 
   return str;

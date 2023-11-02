@@ -30,6 +30,8 @@ struct Token
     Dot,
     If,
     Else,
+    True,
+    False,
     End
   };
 

@@ -151,6 +151,26 @@ const char* wlangGrammarStr = R"STR(
       intermediate.push_back(Op::Type::UnaryMinus);
     }}
     Expression<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}> ";"
+  |
+    // statement that starts with an expression that starts with false (again, why would you want this?)
+    "false"
+    {{
+      Expression* partial = makeNode<Expression>();
+      *partial = false;
+      IntermediateExpression intermediate;
+      intermediate.push_back(partial);
+    }}
+    Expression'<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}> ";"
+  |
+    // statement that starts with an expression that starts with true (again, why would you want this?)
+    "true"
+    {{
+      Expression* partial = makeNode<Expression>();
+      *partial = true;
+      IntermediateExpression intermediate;
+      intermediate.push_back(partial);
+    }}
+    Expression'<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}> ";"
   ;
     {{ return statement; }}
 
@@ -259,6 +279,20 @@ const char* wlangGrammarStr = R"STR(
     {{
       Expression* expression = makeNode<Expression>();
       *expression = v0;
+      result.push_back(expression);
+    }} Expression'<{result}>
+  |
+    "false"
+    {{
+      Expression* expression = makeNode<Expression>();
+      *expression = false;
+      result.push_back(expression);
+    }} Expression'<{result}>
+  |
+    "true"
+    {{
+      Expression* expression = makeNode<Expression>();
+      *expression = true;
       result.push_back(expression);
     }} Expression'<{result}>
   |

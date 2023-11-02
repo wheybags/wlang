@@ -77,6 +77,12 @@ void SemanticAnalyser::run(Expression* expression)
       break;
     }
 
+    case Expression::Bool:
+    {
+      expression->type = { .type = this->parser.tBool };
+      break;
+    }
+
     case Expression::Op:
     {
       Op* op = expression->op();
