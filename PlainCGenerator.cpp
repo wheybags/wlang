@@ -318,6 +318,7 @@ void PlainCGenerator::generate(const Class* node)
   }
 
   this->functionBodies.appendLine("}");
+  this->functionBodies.appendLine();
   this->classes.appendLine("};");
   this->classes.appendLine();
 }

@@ -20,10 +20,11 @@ std::string inputString = R"STRING_RAW(
     i32 y = 0;
   }
 
+  // blah blah
   bool func(i32 x, i32 y)
   {
     Vec2i pos;
-    i32 val = x + 2 * y / 3 + pos.x;
+    i32 val = x + 2 * y / 3 + pos.x; // undefined = poop()
 
     if (1 == 1)
     {
