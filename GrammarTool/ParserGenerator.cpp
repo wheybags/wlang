@@ -207,6 +207,10 @@ ParserSource generateParser(const Grammar& grammar)
             callLine += "parse" + tokenTypeMapping.at(item.str()) + "(ctx);";
             appendSourceLine(callLine);
           }
+          else if (productionIndex == 0)
+          {
+            appendSourceLine("ctx.pop();");
+          }
           else
           {
             appendSourceLine("release_assert(ctx.popCheck(TT::" + tokenTypeMapping.at(item.str()) + "));");
