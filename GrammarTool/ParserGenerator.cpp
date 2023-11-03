@@ -273,7 +273,7 @@ ParserSource generateParser(const Grammar& grammar)
     }
     else
     {
-      appendSourceLine("release_assert(false);");
+      appendSourceLine("message_and_abort(\"fail!\");");
     }
 
     appendSourceLine("}");
