@@ -237,7 +237,15 @@ const char* wlangGrammarStr = R"STR(
     // Maybe one day I will add a fancy selection based on whether A exists as a variable, but TBH it's a kinda
     // useless construct so I probably won't.
     Expression'NoMul<{intermediate}>
-    TheRestOfAStatement<{std::move(intermediate), statement}>;
+    TheRestOfAStatement<{std::move(intermediate), statement}>
+  |
+    Nil
+    {{
+      Expression* expression = makeNode<Expression>();
+      *expression = id;
+      *statement = expression;
+    }}
+  ;
 
 
   TheRestOfADeclaration <{Expression*}> =

@@ -1,17 +1,20 @@
 #include "Tokeniser.hpp"
 #include "StringUtil.hpp"
 #include "Assert.hpp"
-#include <map>
 #include <optional>
 
-const std::vector<std::pair<std::string_view, Token::Type>> keywords
+const std::vector<std::pair<std::string_view, Token::Type>> keywordMapping
 {
   {"return", Token::Type::Return},
-  {"class", Token::Type::Class},
-  {"false", Token::Type::False},
-  {"else", Token::Type::Else},
-  {"true", Token::Type::True},
-  {"if", Token::Type::If},
+  {"class",  Token::Type::Class},
+  {"false",  Token::Type::False},
+  {"else",   Token::Type::Else},
+  {"true",   Token::Type::True},
+  {"if",     Token::Type::If},
+};
+
+const std::vector<std::pair<std::string_view, Token::Type>> tokenMapping
+{
   {"==", Token::Type::CompareEqual},
   {"!=", Token::Type::CompareNotEqual},
   {"&&", Token::Type::LogicalAnd},
@@ -112,7 +115,8 @@ std::vector<Token> tokenise(std::string_view input)
     if (accumulator.empty())
     {
       bool found = false;
-      for (const auto& pair : keywords)
+
+      for (const auto& pair : tokenMapping)
       {
         if (Str::startsWith(input, pair.first))
         {
@@ -120,6 +124,22 @@ std::vector<Token> tokenise(std::string_view input)
           advance(pair.first.size());
           found = true;
           break;
+        }
+      }
+
+      for (const auto& pair : keywordMapping)
+      {
+        std::string_view keyword = pair.first;
+        if (Str::startsWith(input, keyword))
+        {
+          bool keywordEnds = (input.size() >= keyword.size() + 1 && !Str::isAlpha(input[keyword.size()])) || input.size() == keyword.size();
+          if (keywordEnds)
+          {
+            tokens.push_back(Token{pair.second});
+            advance(pair.first.size());
+            found = true;
+            break;
+          }
         }
       }
 
