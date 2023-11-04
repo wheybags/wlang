@@ -69,52 +69,60 @@ void PlainCGenerator::generate(const Block* block, OutputString& str)
 
 void PlainCGenerator::generate(const Statement* node, OutputString& str)
 {
-  if (std::holds_alternative<ReturnStatement*>(*node))
+  switch (node->tag())
   {
-    str.appendLine("return " + generate(std::get<ReturnStatement*>(*node)->retval) + ";");
-  }
-  else if (std::holds_alternative<VariableDeclaration*>(*node))
-  {
-    str.appendLine(generate(std::get<VariableDeclaration*>(*node)) + ";");
-  }
-  else if (std::holds_alternative<Assignment*>(*node))
-  {
-    Assignment* assignment = std::get<Assignment*>(*node);
-    str.appendLine(generate(assignment->left) + " = " +  generate(assignment->right) + ";");
-  }
-  else if (std::holds_alternative<Expression*>(*node))
-  {
-    str.appendLine(generate(std::get<Expression*>(*node)) + ";");
-  }
-  else if (std::holds_alternative<IfElseChain*>(*node))
-  {
-    IfElseChain* ifElseChain = std::get<IfElseChain*>(*node);
-    for (int32_t i = 0; i < int32_t(ifElseChain->items.size()); i++)
+    case Statement::Tag::Return:
     {
-      IfElseChainItem* item = ifElseChain->items[i];
-
-      std::string line;
-      if (i == 0)
-        line += "if";
-      else if (item->condition)
-        line += "else if";
-      else
-        line += "else";
-
-      if (item->condition)
-      {
-        line += " (";
-        line += generate(item->condition);
-        line += ")";
-      }
-
-      str.appendLine(line);
-      generate(item->block, str);
+      str.appendLine("return " + generate(node->returnStatment()->retval) + ";");
+      break;
     }
-  }
-  else
-  {
-    message_and_abort("bad Statement");
+    case Statement::Tag::Variable:
+    {
+      str.appendLine(generate(node->variable()) + ";");
+      break;
+    }
+    case Statement::Tag::Assignment:
+    {
+      Assignment* assignment = node->assignment();
+      str.appendLine(generate(assignment->left) + " = " +  generate(assignment->right) + ";");
+      break;
+    }
+    case Statement::Tag::Expression:
+    {
+      str.appendLine(generate(node->expression()) + ";");
+      break;
+    }
+    case Statement::Tag::IfElseChain:
+    {
+      IfElseChain* ifElseChain = node->ifElseChain();
+      for (int32_t i = 0; i < int32_t(ifElseChain->items.size()); i++)
+      {
+        IfElseChainItem* item = ifElseChain->items[i];
+
+        std::string line;
+        if (i == 0)
+          line += "if";
+        else if (item->condition)
+          line += "else if";
+        else
+          line += "else";
+
+        if (item->condition)
+        {
+          line += " (";
+          line += generate(item->condition);
+          line += ")";
+        }
+
+        str.appendLine(line);
+        generate(item->block, str);
+      }
+      break;
+    }
+    case Statement::Tag::None:
+    {
+      message_and_abort("bad Statement");
+    }
   }
 }
 
@@ -149,25 +157,25 @@ std::string PlainCGenerator::generate(const Expression* node)
 
   switch(node->tag())
   {
-    case Expression::Id:
+    case Expression::Tag::Id:
     {
       str += node->id();
       break;
     }
 
-    case Expression::Int32:
+    case Expression::Tag::Int32:
     {
-      str += std::to_string(node->int32());
+      str += std::to_string(node->i32());
       break;
     }
 
-    case Expression::Bool:
+    case Expression::Tag::Bool:
     {
       str += node->boolean() ? "true" : "false";
       break;
     }
 
-    case Expression::Op:
+    case Expression::Tag::Op:
     {
       const Op* opNode = node->op();
 
@@ -294,7 +302,7 @@ std::string PlainCGenerator::generate(const Expression* node)
       break;
     }
 
-    case Expression::None:
+    case Expression::Tag::None:
       release_assert(false);
   }
 

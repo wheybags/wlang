@@ -37,18 +37,26 @@ void SemanticAnalyser::run(Class* classN)
 
 void SemanticAnalyser::run(Statement* statement, Func* func)
 {
-  if (std::holds_alternative<ReturnStatement*>(*statement))
-    run(std::get<ReturnStatement*>(*statement), func);
-  else if (std::holds_alternative<VariableDeclaration*>(*statement))
-    run(std::get<VariableDeclaration*>(*statement));
-  else if (std::holds_alternative<Assignment*>(*statement))
-    run(std::get<Assignment*>(*statement));
-  else if (std::holds_alternative<Expression*>(*statement))
-    run(std::get<Expression*>(*statement));
-  else if (std::holds_alternative<IfElseChain*>(*statement))
-    run(std::get<IfElseChain*>(*statement), func);
-  else
-    message_and_abort("bad statement");
+  switch (statement->tag())
+  {
+    case Statement::Tag::Return:
+      run(statement->returnStatment(), func);
+      break;
+    case Statement::Tag::Variable:
+      run(statement->variable());
+      break;
+    case Statement::Tag::Assignment:
+      run(statement->assignment());
+      break;
+    case Statement::Tag::Expression:
+      run(statement->expression());
+      break;
+    case Statement::Tag::IfElseChain:
+      run(statement->ifElseChain(), func);
+      break;
+    case Statement::Tag::None:
+      message_and_abort("bad statement");
+  }
 }
 
 void SemanticAnalyser::run(Assignment* assignment)
@@ -62,7 +70,7 @@ void SemanticAnalyser::run(Expression* expression)
 {
   switch (expression->tag())
   {
-    case Expression::Id:
+    case Expression::Tag::Id:
     {
       ScopeItem item = this->scopeStack.back()->lookup(expression->id());
       release_assert(item);
@@ -71,19 +79,19 @@ void SemanticAnalyser::run(Expression* expression)
       break;
     }
 
-    case Expression::Int32:
+    case Expression::Tag::Int32:
     {
       expression->type = { .type = this->parser.tInt32 };
       break;
     }
 
-    case Expression::Bool:
+    case Expression::Tag::Bool:
     {
       expression->type = { .type = this->parser.tBool };
       break;
     }
 
-    case Expression::Op:
+    case Expression::Tag::Op:
     {
       Op* op = expression->op();
       switch (op->type)
@@ -174,7 +182,7 @@ void SemanticAnalyser::run(Expression* expression)
       break;
     }
 
-    case Expression::None:
+    case Expression::Tag::None:
       message_and_abort("empty expression!");
   }
 

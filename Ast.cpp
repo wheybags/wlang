@@ -90,37 +90,46 @@ void dumpJson(const Expression* node, std::string& str, int32_t tabIndex)
 {
   switch(node->tag())
   {
-    case Expression::Id:
+    case Expression::Tag::Id:
       dumpJson(node->id(), str, tabIndex);
       break;
-    case Expression::Int32:
-      dumpJson(node->int32(), str, tabIndex);
+    case Expression::Tag::Int32:
+      dumpJson(node->i32(), str, tabIndex);
       break;
-    case Expression::Bool:
+    case Expression::Tag::Bool:
       dumpJson(node->boolean(), str, tabIndex);
       break;
-    case Expression::Op:
+    case Expression::Tag::Op:
       dumpJson(node->op(), str, tabIndex);
       break;
-    case Expression::None:
+    case Expression::Tag::None:
       message_and_abort("empty expression");
   }
 }
 
 void dumpJson(const Statement* node, std::string& str, int32_t tabIndex)
 {
-  if (std::holds_alternative<ReturnStatement*>(*node))
-    dumpJson(std::get<ReturnStatement*>(*node), str, tabIndex);
-  else if (std::holds_alternative<VariableDeclaration*>(*node))
-    dumpJson(std::get<VariableDeclaration*>(*node), str, tabIndex);
-  else if (std::holds_alternative<Assignment*>(*node))
-    dumpJson(std::get<Assignment*>(*node), str, tabIndex);
-  else if (std::holds_alternative<Expression*>(*node))
-    dumpJson(std::get<Expression*>(*node), str, tabIndex);
-  else if (std::holds_alternative<IfElseChain*>(*node))
-    dumpJson(std::get<IfElseChain*>(*node), str, tabIndex);
-  else
-    message_and_abort("empty expression");
+  switch (node->tag())
+  {
+    case Statement::Tag::Return:
+      dumpJson(node->returnStatment(), str, tabIndex);
+      break;
+    case Statement::Tag::Variable:
+      dumpJson(node->variable(), str, tabIndex);
+      break;
+    case Statement::Tag::Assignment:
+      dumpJson(node->assignment(), str, tabIndex);
+      break;
+    case Statement::Tag::Expression:
+      dumpJson(node->expression(), str, tabIndex);
+      break;
+    case Statement::Tag::IfElseChain:
+      dumpJson(node->ifElseChain(), str, tabIndex);
+      break;
+    case Statement::Tag::None:
+      message_and_abort("empty statement");
+      break;
+  }
 }
 
 void dumpJson(const Root* node, std::string& str, int32_t tabIndex)

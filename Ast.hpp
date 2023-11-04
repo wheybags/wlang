@@ -5,6 +5,7 @@
 #include <vector>
 #include <unordered_map>
 #include "Assert.hpp"
+#include "CreateTaggedUnion.hpp"
 
 struct Root;
 struct FuncList;
@@ -32,53 +33,35 @@ struct Scope;
 
 class Expression
 {
-public:
-  enum Tag
-  {
-    None,
-    Id,
-    Int32,
-    Bool,
-    Op,
-  };
+  #define FOR_EACH_TAGGED_UNION_TYPE(XX) \
+  XX(id, Id, std::string) \
+  XX(i32, Int32, int32_t) \
+  XX(boolean, Bool, bool ) \
+  XX(op, Op, Op*)
 
-  Expression() = default;
-  Expression(std::string id) : _id(std::move(id)), _tag(Id) {}
-  Expression(int32_t i32) : _i32(i32), _tag(Int32) {}
-  Expression(bool b) : _bool(b), _tag(Bool) {}
-  Expression(struct Op* op) : _op(op), _tag(Op) {}
-
-  Tag tag() const { return _tag; }
-
-  bool isId() const { return _tag == Id; }
-  bool isInt32() const { return _tag == Int32; }
-  bool isBool() const { return _tag == Bool; }
-  bool isOp() const { return _tag == Op; }
-
-  const std::string& id() const { release_assert(isId()); return _id; }
-  int32_t int32() const { release_assert(isInt32()); return _i32; }
-  bool boolean() const { release_assert(isBool()); return _bool; }
-  const struct Op* op() const { release_assert(isOp()); return _op; }
-  struct Op* op() { release_assert(isOp()); return _op; }
+  #define CLASS_NAME Expression
+    CREATE_TAGGED_UNION
+  #undef CLASS_NAME
+  #undef FOR_EACH_TAGGED_UNION_TYPE
 
 public:
   TypeRef type;
-
-private:
-  Tag _tag = None;
-
-  std::string _id;
-  int32_t _i32 = 0;
-  bool _bool = false;
-  struct Op* _op = nullptr;
 };
 
-using Statement = std::variant<std::monostate,
-  ReturnStatement*,
-  VariableDeclaration*,
-  Assignment*,
-  Expression*,
-  IfElseChain*>;
+class Statement
+{
+  #define FOR_EACH_TAGGED_UNION_TYPE(XX) \
+  XX(returnStatment, Return, ReturnStatement*) \
+  XX(variable, Variable, VariableDeclaration*) \
+  XX(assignment, Assignment, Assignment*) \
+  XX(expression, Expression, Expression*) \
+  XX(ifElseChain, IfElseChain, IfElseChain*)
+
+  #define CLASS_NAME Statement
+    CREATE_TAGGED_UNION
+  #undef CLASS_NAME
+  #undef FOR_EACH_TAGGED_UNION_TYPE
+};
 
 struct Root
 {
@@ -178,36 +161,17 @@ struct IfElseChainItem
   Block* block = nullptr;
 };
 
+
 struct ScopeItem
 {
-  enum class Tag
-  {
-    None,
-    Function,
-    Variable,
-  };
+#define FOR_EACH_TAGGED_UNION_TYPE(XX) \
+  XX(function, Function, Func*) \
+  XX(variable, Variable, VariableDeclaration*)
 
-  ScopeItem() = default;
-  ScopeItem(Func* func) : _tag(Tag::Function), _function(func) { release_assert(func); }
-  ScopeItem(VariableDeclaration* var) : _tag(Tag::Variable), _variable(var) { release_assert(var); }
-
-  Tag tag() const { return _tag; }
-  bool isFunction() const { return _tag == Tag::Function; }
-  bool isVariable() const { return _tag == Tag::Variable; }
-  operator bool() const { return _tag != Tag::None; }
-
-  Func* function() { release_assert(isFunction()); return _function; }
-  const Func* function() const { release_assert(isFunction()); return _function; }
-  VariableDeclaration* variable() { release_assert(isVariable()); return _variable; }
-  const VariableDeclaration* variable() const{ release_assert(isVariable()); return _variable; }
-
-private:
-  Tag _tag = Tag::None;
-  union
-  {
-    Func* _function;
-    VariableDeclaration* _variable;
-  };
+#define CLASS_NAME ScopeItem
+  CREATE_TAGGED_UNION
+#undef CLASS_NAME
+#undef FOR_EACH_TAGGED_UNION_TYPE
 };
 
 struct Scope
