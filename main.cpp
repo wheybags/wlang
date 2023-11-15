@@ -4,6 +4,15 @@
 #include "SemanticAnalyser.hpp"
 
 std::string inputString = R"STRING_RAW(
+  bool b()
+  {
+    bool xxx = false;
+    bool z = xxx;
+    bool y = true;
+    return z;
+  }
+
+
   i32 ff(Vec2i* vec)
   {
     false;

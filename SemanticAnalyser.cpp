@@ -68,32 +68,41 @@ void SemanticAnalyser::run(Assignment* assignment)
 
 void SemanticAnalyser::run(Expression* expression)
 {
-  switch (expression->tag())
+  switch (expression->val.tag())
   {
-    case Expression::Tag::Id:
+    case Expression::Val::Tag::Id:
     {
-      ScopeItem item = this->scopeStack.back()->lookup(expression->id());
+      ScopeItem item = this->scopeStack.back()->lookup(expression->val.id());
       release_assert(item);
       release_assert(item.isVariable());
+
+      if (!expression->source.isAfterEndOf(item.variable()->source))
+      {
+        message_and_abort_fmt("%s (%d:%d) used before definition (%d:%d)",
+                              expression->val.id().c_str(),
+                              expression->source.start.y, expression->source.start.x,
+                              item.variable()->source.start.y, item.variable()->source.start.x);
+      }
+
       expression->type = item.variable()->type;
       break;
     }
 
-    case Expression::Tag::Int32:
+    case Expression::Val::Tag::Int32:
     {
       expression->type = { .type = this->parser.tInt32 };
       break;
     }
 
-    case Expression::Tag::Bool:
+    case Expression::Val::Tag::Bool:
     {
       expression->type = { .type = this->parser.tBool };
       break;
     }
 
-    case Expression::Tag::Op:
+    case Expression::Val::Tag::Op:
     {
-      Op* op = expression->op();
+      Op* op = expression->val.op();
       switch (op->type)
       {
         case Op::Type::CompareEqual:
@@ -128,9 +137,9 @@ void SemanticAnalyser::run(Expression* expression)
 
         case Op::Type::Call:
         {
-          release_assert(op->left->isId());
+          release_assert(op->left->val.isId());
 
-          ScopeItem item = this->scopeStack.back()->lookup(op->left->id());
+          ScopeItem item = this->scopeStack.back()->lookup(op->left->val.id());
           release_assert(item);
           release_assert(item.isFunction());
 
@@ -152,12 +161,12 @@ void SemanticAnalyser::run(Expression* expression)
         case Op::Type::MemberAccess:
         {
           run(op->left);
-          release_assert(op->right->isId());
+          release_assert(op->right->val.isId());
 
           release_assert(op->left->type.pointerDepth <= 1);
           release_assert(op->left->type.type->typeClass);
 
-          auto it = op->left->type.type->typeClass->memberVariables.find(op->right->id());
+          auto it = op->left->type.type->typeClass->memberVariables.find(op->right->val.id());
           release_assert(it != op->left->type.type->typeClass->memberVariables.end());
 
           expression->type = it->second->type;
@@ -182,7 +191,7 @@ void SemanticAnalyser::run(Expression* expression)
       break;
     }
 
-    case Expression::Tag::None:
+    case Expression::Val::Tag::None:
       message_and_abort("empty expression!");
   }
 

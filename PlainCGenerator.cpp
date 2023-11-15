@@ -155,29 +155,29 @@ std::string PlainCGenerator::generate(const Expression* node)
 {
   std::string str;
 
-  switch(node->tag())
+  switch(node->val.tag())
   {
-    case Expression::Tag::Id:
+    case Expression::Val::Tag::Id:
     {
-      str += node->id();
+      str += node->val.id();
       break;
     }
 
-    case Expression::Tag::Int32:
+    case Expression::Val::Tag::Int32:
     {
-      str += std::to_string(node->i32());
+      str += std::to_string(node->val.i32());
       break;
     }
 
-    case Expression::Tag::Bool:
+    case Expression::Val::Tag::Bool:
     {
-      str += node->boolean() ? "true" : "false";
+      str += node->val.boolean() ? "true" : "false";
       break;
     }
 
-    case Expression::Tag::Op:
+    case Expression::Val::Tag::Op:
     {
-      const Op* opNode = node->op();
+      const Op* opNode = node->val.op();
 
       switch (opNode->type)
       {
@@ -302,7 +302,7 @@ std::string PlainCGenerator::generate(const Expression* node)
       break;
     }
 
-    case Expression::Tag::None:
+    case Expression::Val::Tag::None:
       release_assert(false);
   }
 
@@ -322,7 +322,7 @@ void PlainCGenerator::generate(const Class* node)
   {
     VariableDeclaration* variableDeclaration = node->memberVariables.at(name);
     this->classes.appendLine(strType(variableDeclaration->type) + " " + variableDeclaration->name + ";");
-    this->functionBodies.appendLine("obj->" + variableDeclaration->name + " = " + generate(variableDeclaration->initialiser));
+    this->functionBodies.appendLine("obj->" + variableDeclaration->name + " = " + generate(variableDeclaration->initialiser) + ";");
   }
 
   this->functionBodies.appendLine("}");

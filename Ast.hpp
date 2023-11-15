@@ -5,7 +5,7 @@
 #include <vector>
 #include <unordered_map>
 #include "Assert.hpp"
-#include "CreateTaggedUnion.hpp"
+#include "Tokeniser.hpp"
 
 struct Root;
 struct FuncList;
@@ -33,35 +33,30 @@ struct Scope;
 
 class Expression
 {
-  #define FOR_EACH_TAGGED_UNION_TYPE(XX) \
-  XX(id, Id, std::string) \
-  XX(i32, Int32, int32_t) \
-  XX(boolean, Bool, bool ) \
-  XX(op, Op, Op*)
-
-  #define CLASS_NAME Expression
-    CREATE_TAGGED_UNION
-  #undef CLASS_NAME
-  #undef FOR_EACH_TAGGED_UNION_TYPE
-
 public:
+  #define FOR_EACH_TAGGED_UNION_TYPE(XX) \
+    XX(id, Id, std::string) \
+    XX(i32, Int32, int32_t) \
+    XX(boolean, Bool, bool ) \
+    XX(op, Op, Op*)
+  #define CLASS_NAME Val
+  #include "CreateTaggedUnion.hpp"
+
+  Val val;
   TypeRef type;
+  SourceRange source;
 };
 
-class Statement
-{
-  #define FOR_EACH_TAGGED_UNION_TYPE(XX) \
+
+#define FOR_EACH_TAGGED_UNION_TYPE(XX) \
   XX(returnStatment, Return, ReturnStatement*) \
   XX(variable, Variable, VariableDeclaration*) \
   XX(assignment, Assignment, Assignment*) \
   XX(expression, Expression, Expression*) \
   XX(ifElseChain, IfElseChain, IfElseChain*)
+#define CLASS_NAME Statement
+#include "CreateTaggedUnion.hpp"
 
-  #define CLASS_NAME Statement
-    CREATE_TAGGED_UNION
-  #undef CLASS_NAME
-  #undef FOR_EACH_TAGGED_UNION_TYPE
-};
 
 struct Root
 {
@@ -101,6 +96,7 @@ struct VariableDeclaration
 {
   TypeRef type;
   std::string name;
+  SourceRange source;
   Expression* initialiser = nullptr; // maybe null
 };
 
@@ -162,17 +158,11 @@ struct IfElseChainItem
 };
 
 
-struct ScopeItem
-{
 #define FOR_EACH_TAGGED_UNION_TYPE(XX) \
   XX(function, Function, Func*) \
   XX(variable, Variable, VariableDeclaration*)
-
 #define CLASS_NAME ScopeItem
-  CREATE_TAGGED_UNION
-#undef CLASS_NAME
-#undef FOR_EACH_TAGGED_UNION_TYPE
-};
+#include "CreateTaggedUnion.hpp"
 
 struct Scope
 {

@@ -64,20 +64,38 @@ std::vector<Token> tokenise(std::string_view input)
   };
 
   Type accumulatorType = Type::None;
+  int32_t accumulatorStartY = -1;
+  int32_t accumulatorStartX = -1;
   std::string accumulator;
   accumulator.reserve(1024);
+
+  int32_t accumulatorY = 1;
+  int32_t accumulatorX = 1;
+  bool wasNewline = false;
 
   auto breakToken = [&]()
   {
     if (accumulator.empty())
       return;
 
+    SourceRange source({accumulatorStartX, accumulatorStartY}, {accumulatorX, accumulatorY});
+
     if (accumulatorType == Type::Id)
-      tokens.emplace_back(Token{Token::Type::Id, accumulator});
+      tokens.emplace_back(Token{.type = Token::Type::Id, .idValue = accumulator, .source = source});
     else if (accumulatorType == Type::Int32)
-      tokens.emplace_back(Token{Token::Type::Int32, std::string(), *parseInt32(accumulator)});
+      tokens.emplace_back(Token{.type = Token::Type::Int32, .i32Value = *parseInt32(accumulator), .source = source});
 
     accumulator.clear();
+  };
+
+  auto accumulate = [&](char c)
+  {
+    if (accumulator.empty())
+    {
+      accumulatorStartY = accumulatorY;
+      accumulatorStartX = accumulatorX;
+    }
+    accumulator += c;
   };
 
   auto advance = [&](size_t chars)
@@ -88,6 +106,18 @@ std::vector<Token> tokenise(std::string_view input)
 
   while (!input.empty())
   {
+    accumulatorX++;
+
+    if (wasNewline)
+    {
+      accumulatorY++;
+      accumulatorX = 1;
+      wasNewline = false;
+    }
+
+    if (input[0] == '\n')
+      wasNewline = true;
+
     if (accumulatorType == Type::Comment)
     {
       if (input[0] == '\n')
@@ -118,10 +148,12 @@ std::vector<Token> tokenise(std::string_view input)
 
       for (const auto& pair : tokenMapping)
       {
-        if (Str::startsWith(input, pair.first))
+        std::string_view keyword = pair.first;
+        if (Str::startsWith(input, keyword))
         {
-          tokens.push_back(Token{pair.second});
-          advance(pair.first.size());
+          SourceRange source({accumulatorX, accumulatorY}, {accumulatorX + int32_t(keyword.size()), accumulatorY});
+          tokens.push_back(Token{.type = pair.second, .source = source});
+          advance(keyword.size());
           found = true;
           break;
         }
@@ -135,7 +167,8 @@ std::vector<Token> tokenise(std::string_view input)
           bool keywordEnds = (input.size() >= keyword.size() + 1 && !Str::isAlpha(input[keyword.size()])) || input.size() == keyword.size();
           if (keywordEnds)
           {
-            tokens.push_back(Token{pair.second});
+            SourceRange source({accumulatorX, accumulatorY}, {accumulatorX + int32_t(keyword.size()), accumulatorY});
+            tokens.push_back(Token{.type = pair.second, .source = source});
             advance(pair.first.size());
             found = true;
             break;
@@ -148,14 +181,14 @@ std::vector<Token> tokenise(std::string_view input)
 
       if (input[0] == '_' || Str::isAlpha(input[0]))
       {
-        accumulator.push_back(input[0]);
+        accumulate(input[0]);
         accumulatorType = Type::Id;
         advance(1);
         continue;
       }
       else if (Str::isAlphaNumeric(input[0]))
       {
-        accumulator.push_back(input[0]);
+        accumulate(input[0]);
         accumulatorType = Type::Int32;
         advance(1);
         continue;
@@ -177,12 +210,14 @@ std::vector<Token> tokenise(std::string_view input)
       continue;
     }
 
-    accumulator.push_back(input[0]);
+    accumulate(input[0]);
     advance(1);
   }
 
   breakToken();
 
-  tokens.push_back(Token{Token::Type::End});
+
+  SourceRange source({accumulatorX, accumulatorY}, {accumulatorX, accumulatorY});
+  tokens.push_back(Token{.type = Token::Type::End, .source = source});
   return tokens;
 }

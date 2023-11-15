@@ -124,15 +124,17 @@ const char* wlangGrammarStr = R"STR(
     // declaration, or an expression that starts with $Id
     // This awkwardness exists because declarations (and assignments) are not expressions, which is a design choice
     // We basically need to copy paste the rules from Expression into Statement, so we can allow any expression as a statement
-    $Id StatementThatStartsWithId <{v0, statement}> ";"
+    {{ SourceRange idSource = ctx.peek().source; }}
+    $Id StatementThatStartsWithId <{v0, idSource, statement}> ";"
   |
     // statement that starts with an expression that starts with $Int32
     $Int32
     {{
       Expression* partial = makeNode<Expression>();
-      *partial = v0;
+      partial->val = v0;
+      partial->source = ctx.lastPopped().source;
       IntermediateExpression intermediate;
-      intermediate.push_back(partial);
+      intermediate.emplace_back(partial, partial->source);
     }}
     Expression'<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}> ";"
   |
@@ -140,7 +142,7 @@ const char* wlangGrammarStr = R"STR(
     "!"
     {{
       IntermediateExpression intermediate;
-      intermediate.push_back(Op::Type::LogicalNot);
+      intermediate.emplace_back(Op::Type::LogicalNot, ctx.lastPopped().source);
     }}
     Expression<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}> ";"
   |
@@ -148,7 +150,7 @@ const char* wlangGrammarStr = R"STR(
     "-"
     {{
       IntermediateExpression intermediate;
-      intermediate.push_back(Op::Type::UnaryMinus);
+      intermediate.emplace_back(Op::Type::UnaryMinus, ctx.lastPopped().source);
     }}
     Expression<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}> ";"
   |
@@ -156,9 +158,10 @@ const char* wlangGrammarStr = R"STR(
     "false"
     {{
       Expression* partial = makeNode<Expression>();
-      *partial = false;
+      partial->val = false;
+      partial->source = ctx.lastPopped().source;
       IntermediateExpression intermediate;
-      intermediate.push_back(partial);
+      intermediate.emplace_back(partial, partial->source);
     }}
     Expression'<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}> ";"
   |
@@ -166,9 +169,10 @@ const char* wlangGrammarStr = R"STR(
     "true"
     {{
       Expression* partial = makeNode<Expression>();
-      *partial = true;
+      partial->val = true;
+      partial->source = ctx.lastPopped().source;
       IntermediateExpression intermediate;
-      intermediate.push_back(partial);
+      intermediate.emplace_back(partial, partial->source);
     }}
     Expression'<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}> ";"
   ;
@@ -210,16 +214,21 @@ const char* wlangGrammarStr = R"STR(
   ;
 
 
-  StatementThatStartsWithId <{void}> <{const std::string& id, Statement* statement}> =
+  StatementThatStartsWithId <{void}> <{const std::string& id, SourceRange idSource, Statement* statement}> =
     // declaration
     {{
       VariableDeclaration* variableDeclaration = makeNode<VariableDeclaration>();
       variableDeclaration->type = TypeRef { .type = getOrCreateType(id) };
     }}
-    Type'<{variableDeclaration->type}> $Id TheRestOfADeclaration
+    Type'<{variableDeclaration->type}>
+    $Id TheRestOfADeclaration
     {{
+      SourceRange declarationEnd = ctx.lastPopped().source;
+
       variableDeclaration->name = v0;
       variableDeclaration->initialiser = v1;
+      variableDeclaration->source = SourceRange(idSource.start, declarationEnd.end);
+
       ctx.getScope()->variables.insert_or_assign(variableDeclaration->name, variableDeclaration);
       *statement = variableDeclaration;
     }}
@@ -227,9 +236,11 @@ const char* wlangGrammarStr = R"STR(
     // assign, or standalone expression that starts with id
     {{
       Expression* partial = makeNode<Expression>();
-      *partial = id;
+      partial->val = id;
+      partial->source = idSource;
+
       IntermediateExpression intermediate;
-      intermediate.push_back(partial);
+      intermediate.emplace_back(partial, partial->source);
     }}
     // The statement A*b is ambiguous - is it a multiplication or pointer declaration?
     // Here we resolve the ambiguity - it's a pointer declaration. We do this by using a special version
@@ -242,7 +253,7 @@ const char* wlangGrammarStr = R"STR(
     Nil
     {{
       Expression* expression = makeNode<Expression>();
-      *expression = id;
+      expression->val = id;
       *statement = expression;
     }}
   ;
@@ -275,84 +286,96 @@ const char* wlangGrammarStr = R"STR(
     {{ *statement = resolveIntermediateExpression(std::move(intermediateExpression)); }};
 
 
-  Expression <{void}> <{IntermediateExpression& result}> =
+  Expression <{void}> <{IntermediateExpression& result}>
+     {{ SourceRange source = ctx.peek().source; }}
+  =
     $Id
     {{
       Expression* expression = makeNode<Expression>();
-      *expression = v0;
-      result.push_back(expression);
+      expression->val = v0;
+      expression->source = source;
+      result.emplace_back(expression, expression->source);
     }} Expression'<{result}>
   |
     $Int32
     {{
       Expression* expression = makeNode<Expression>();
-      *expression = v0;
-      result.push_back(expression);
+      expression->val = v0;
+      expression->source = source;
+      result.emplace_back(expression, expression->source);
     }} Expression'<{result}>
   |
     "false"
     {{
       Expression* expression = makeNode<Expression>();
-      *expression = false;
-      result.push_back(expression);
+      expression->val = false;
+      expression->source = source;
+      result.emplace_back(expression, expression->source);
     }} Expression'<{result}>
   |
     "true"
     {{
       Expression* expression = makeNode<Expression>();
-      *expression = true;
-      result.push_back(expression);
+      expression->val = true;
+      expression->source = source;
+      result.emplace_back(expression, expression->source);
     }} Expression'<{result}>
   |
     "!"
     {{
-      result.push_back(Op::Type::LogicalNot);
+      result.emplace_back(Op::Type::LogicalNot, source);
     }} Expression<{result}>
   |
     "-"
     {{
-      result.push_back(Op::Type::UnaryMinus);
+      result.emplace_back(Op::Type::UnaryMinus, source);
     }} Expression<{result}>
   ;
 
 
   Expression'NoMul <{void}> <{IntermediateExpression& result}> =
-    {{ result.push_back(Op::Type::CompareEqual); }}
+    {{ result.emplace_back(Op::Type::CompareEqual, ctx.peek().source); }}
     "==" Expression<{result}>
   |
-    {{ result.push_back(Op::Type::CompareNotEqual); }}
+    {{ result.emplace_back(Op::Type::CompareNotEqual, ctx.peek().source); }}
     "!=" Expression<{result}>
   |
-    {{ result.push_back(Op::Type::LogicalAnd); }}
+    {{ result.emplace_back(Op::Type::LogicalAnd, ctx.peek().source); }}
     "&&" Expression<{result}>
   |
-    {{ result.push_back(Op::Type::LogicalOr); }}
+    {{ result.emplace_back(Op::Type::LogicalOr, ctx.peek().source); }}
     "||" Expression<{result}>
   |
-    {{ result.push_back(Op::Type::Add); }}
+    {{ result.emplace_back(Op::Type::Add, ctx.peek().source); }}
     "+" Expression<{result}>
   |
-    {{ result.push_back(Op::Type::Subtract); }}
+    {{ result.emplace_back(Op::Type::Subtract, ctx.peek().source); }}
     "-" Expression<{result}>
   |
-    {{ result.push_back(Op::Type::Divide); }}
+    {{ result.emplace_back(Op::Type::Divide, ctx.peek().source); }}
     "/" Expression<{result}>
   |
-    {{ result.push_back(Op::Type::MemberAccess); }}
+    {{ result.emplace_back(Op::Type::MemberAccess, ctx.peek().source); }}
     "." Expression<{result}>
   |
-    {{ std::vector<Expression*> argList; }}
-    "(" CallParamList<{argList}> ")"
     {{
-      result.emplace_back(Op::Type::Call);
-      result.emplace_back(std::move(argList));
+      result.emplace_back(Op::Type::Call, ctx.peek().source);
+      std::vector<Expression*> argList;
+      SourceRange openBracket = ctx.peek().source;
+     }}
+    "("
+     CallParamList<{argList}>
+    {{
+      SourceRange closeBracket = ctx.peek().source;
+      result.emplace_back(std::move(argList), SourceRange(openBracket.start, closeBracket.end));
     }}
+    ")"
   |
     Nil;
 
 
   Expression' <{void}> <{IntermediateExpression& result}> =
-    {{ result.push_back(Op::Type::Multiply); }}
+    {{ result.emplace_back(Op::Type::Multiply, ctx.peek().source); }}
     "*" Expression<{result}>
   |
     Expression'NoMul<{result}>

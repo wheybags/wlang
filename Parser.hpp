@@ -23,7 +23,20 @@ public:
 private:
   template<typename T> T* makeNode();
 
-  using IntermediateExpressionItem = std::variant<Expression*, Op::Type, std::vector<Expression*>>;
+  struct IntermediateExpressionItem
+  {
+    #define FOR_EACH_TAGGED_UNION_TYPE(XX) \
+      XX(expression, Expression, Expression*) \
+      XX(op, Op, Op::Type) \
+      XX(callArgs, CallArgs, std::vector<Expression*>)
+
+    #define CLASS_NAME Val
+    #include "CreateTaggedUnion.hpp"
+
+    Val val;
+    SourceRange source;
+  };
+
   using IntermediateExpression = std::vector<IntermediateExpressionItem>;
   Expression* resolveIntermediateExpression(IntermediateExpression&& intermediate);
   std::string parseId(ParseContext& ctx);

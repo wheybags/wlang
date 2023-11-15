@@ -88,21 +88,21 @@ void dumpJson(const std::vector<T>& values, std::string& str, int32_t tabIndex)
 
 void dumpJson(const Expression* node, std::string& str, int32_t tabIndex)
 {
-  switch(node->tag())
+  switch(node->val.tag())
   {
-    case Expression::Tag::Id:
-      dumpJson(node->id(), str, tabIndex);
+    case Expression::Val::Tag::Id:
+      dumpJson(node->val.id(), str, tabIndex);
       break;
-    case Expression::Tag::Int32:
-      dumpJson(node->i32(), str, tabIndex);
+    case Expression::Val::Tag::Int32:
+      dumpJson(node->val.i32(), str, tabIndex);
       break;
-    case Expression::Tag::Bool:
-      dumpJson(node->boolean(), str, tabIndex);
+    case Expression::Val::Tag::Bool:
+      dumpJson(node->val.boolean(), str, tabIndex);
       break;
-    case Expression::Tag::Op:
-      dumpJson(node->op(), str, tabIndex);
+    case Expression::Val::Tag::Op:
+      dumpJson(node->val.op(), str, tabIndex);
       break;
-    case Expression::Tag::None:
+    case Expression::Val::Tag::None:
       message_and_abort("empty expression");
   }
 }

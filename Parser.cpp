@@ -28,10 +28,14 @@ public:
     const Token* retval = next;
     next++;
     remaining--;
-#ifndef NDEBUG
     popped = retval;
-#endif
     return *retval;
+  }
+
+  const Token& lastPopped()
+  {
+    release_assert(this->popped);
+    return *this->popped;
   }
 
   bool popCheck(Token::Type type)
@@ -53,9 +57,7 @@ private:
   const Token* next = nullptr;
   size_t remaining = 0;
 
-#ifndef NDEBUG
   const Token* popped = nullptr;
-#endif
 };
 
 Parser::Parser()
@@ -74,27 +76,34 @@ Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& inter
     {
       case Op::Type::Call:
       {
-        opNode->left = std::get<Expression*>(intermediate[i-1]);
-        opNode->callArgs = std::move(std::get<std::vector<Expression*>>(intermediate[i+1]));
+        IntermediateExpressionItem& callable = intermediate[i-1];
+        IntermediateExpressionItem& args = intermediate[i+1];
+
+        opNode->left = callable.val.expression();
+        opNode->callArgs = std::move(args.val.callArgs());
         intermediate.erase(intermediate.begin() + i, intermediate.begin() + (i+2));
 
         opNode->type = op;
         Expression* expression = makeNode<Expression>();
-        *expression = opNode;
-        intermediate[i-1] = expression;
+        expression->val = opNode;
+        expression->source = SourceRange(opNode->left->source.start, args.source.end);
+
+        intermediate[i-1] = IntermediateExpressionItem(expression, expression->source);
         i -= 2;
         break;
       }
       case Op::Type::LogicalNot:
       case Op::Type::UnaryMinus:
       {
-        opNode->left = std::get<Expression*>(intermediate[i+1]);
+        opNode->left = intermediate[i+1].val.expression();
         intermediate.erase(intermediate.begin() + i, intermediate.begin() + (i+1));
 
         opNode->type = op;
         Expression* expression = makeNode<Expression>();
-        *expression = opNode;
-        intermediate[i] = expression;
+        expression->val = opNode;
+        expression->source = SourceRange(intermediate[i].source.start, opNode->left->source.end);
+
+        intermediate[i] = IntermediateExpressionItem(expression, expression->source);
         break;
       }
       case Op::Type::Add:
@@ -107,14 +116,16 @@ Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& inter
       case Op::Type::LogicalOr:
       case Op::Type::MemberAccess:
       {
-        opNode->left = std::get<Expression*>(intermediate[i-1]);
-        opNode->right = std::get<Expression*>(intermediate[i+1]);
+        opNode->left = intermediate[i-1].val.expression();
+        opNode->right = intermediate[i+1].val.expression();
         intermediate.erase(intermediate.begin() + i, intermediate.begin() + (i+2));
 
         opNode->type = op;
         Expression* expression = makeNode<Expression>();
-        *expression = opNode;
-        intermediate[i-1] = expression;
+        expression->val = opNode;
+        expression->source = SourceRange(opNode->left->source.start, opNode->right->source.end);
+
+        intermediate[i-1] = IntermediateExpressionItem(expression, expression->source);
         i -= 2;
         break;
       }
@@ -124,15 +135,22 @@ Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& inter
     }
   };
 
+#ifndef NDEBUG
+  for (int32_t i = 0; i < int32_t(intermediate.size()); i++)
+  {
+    release_assert(intermediate[i].source.start > SourceLocation());
+    release_assert(intermediate[i].source.end > intermediate[i].source.start);
+  }
+#endif
+
   // See https://en.cppreference.com/w/c/language/operator_precedence
 
-
   // group 1
-  for (int32_t i = 1; i < int32_t(intermediate.size()); i++)
+  for (int32_t i = 0; i < int32_t(intermediate.size()); i++)
   {
-    if (!std::holds_alternative<Op::Type>(intermediate[i]))
+    if (!intermediate[i].val.isOp())
       continue;
-    Op::Type op = std::get<Op::Type>(intermediate[i]);
+    Op::Type op = intermediate[i].val.op();
     if (op == Op::Type::Call || op == Op::Type::MemberAccess)
       outputOp(op, i);
   }
@@ -140,65 +158,65 @@ Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& inter
   // group 2
   for (int32_t i = int32_t(intermediate.size()) - 1; i >= 0; i--)
   {
-    if (!std::holds_alternative<Op::Type>(intermediate[i]))
+    if (!intermediate[i].val.isOp())
       continue;
-    Op::Type op = std::get<Op::Type>(intermediate[i]);
+    Op::Type op = intermediate[i].val.op();
     if (op == Op::Type::LogicalNot || op == Op::Type::UnaryMinus)
       outputOp(op, i);
   }
 
   // group 3
-  for (int32_t i = 1; i < int32_t(intermediate.size()); i++)
+  for (int32_t i = 0; i < int32_t(intermediate.size()); i++)
   {
-    if (!std::holds_alternative<Op::Type>(intermediate[i]))
+    if (!intermediate[i].val.isOp())
       continue;
-    Op::Type op = std::get<Op::Type>(intermediate[i]);
+    Op::Type op = intermediate[i].val.op();
     if (op == Op::Type::Multiply || op == Op::Type::Divide)
       outputOp(op, i);
   }
 
   // group 4
-  for (int32_t i = 1; i < int32_t(intermediate.size()); i++)
+  for (int32_t i = 0; i < int32_t(intermediate.size()); i++)
   {
-    if (!std::holds_alternative<Op::Type>(intermediate[i]))
+    if (!intermediate[i].val.isOp())
       continue;
-    Op::Type op = std::get<Op::Type>(intermediate[i]);
+    Op::Type op = intermediate[i].val.op();
     if (op == Op::Type::Add || op == Op::Type::Subtract)
       outputOp(op, i);
   }
 
   // group 7
-  for (int32_t i = 1; i < int32_t(intermediate.size()); i++)
+  for (int32_t i = 0; i < int32_t(intermediate.size()); i++)
   {
-    if (!std::holds_alternative<Op::Type>(intermediate[i]))
+    if (!intermediate[i].val.isOp())
       continue;
-    Op::Type op = std::get<Op::Type>(intermediate[i]);
+    Op::Type op = intermediate[i].val.op();
     if (op == Op::Type::CompareEqual || op == Op::Type::CompareNotEqual)
       outputOp(op, i);
   }
 
   // group 11
-  for (int32_t i = 1; i < int32_t(intermediate.size()); i++)
+  for (int32_t i = 0; i < int32_t(intermediate.size()); i++)
   {
-    if (!std::holds_alternative<Op::Type>(intermediate[i]))
+    if (!intermediate[i].val.isOp())
       continue;
-    Op::Type op = std::get<Op::Type>(intermediate[i]);
+    Op::Type op = intermediate[i].val.op();
     if (op == Op::Type::LogicalAnd)
       outputOp(op, i);
   }
 
   // group 12
-  for (int32_t i = 1; i < int32_t(intermediate.size()); i++)
+  for (int32_t i = 0; i < int32_t(intermediate.size()); i++)
   {
-    if (!std::holds_alternative<Op::Type>(intermediate[i]))
+    if (!intermediate[i].val.isOp())
       continue;
-    Op::Type op = std::get<Op::Type>(intermediate[i]);
+    Op::Type op = intermediate[i].val.op();
     if (op == Op::Type::LogicalOr)
       outputOp(op, i);
   }
 
   debug_assert(intermediate.size() == 1);
-  return std::get<Expression*>(intermediate[0]);
+  return intermediate[0].val.expression();
 }
 
 Root* Parser::parse(const std::vector<Token>& tokenStrings)
