@@ -11,15 +11,15 @@
 const char* wlangGrammarStr = R"STR(
   Root <{Root*}> =
     {{
-      Root* rootNode = ctx.makeNode<Root>();
-      rootNode->funcList = ctx.makeNode<FuncList>();
+      Root* rootNode = makeNode<Root>();
+      rootNode->funcList = makeNode<FuncList>();
 
-      rootNode->funcList->scope = ctx.makeNode<Scope>();
-      ctx.pushScope(rootNode->funcList->scope);
+      rootNode->funcList->scope = makeNode<Scope>();
+      pushScope(rootNode->funcList->scope);
 
     }} FuncList<{rootNode->funcList}> $End
     {{
-      ctx.popScope();
+      popScope();
       return rootNode;
     }};
 
@@ -34,7 +34,7 @@ const char* wlangGrammarStr = R"STR(
   |
     "class" BaseType
     {{
-      Class* newClass = ctx.makeNode<Class>();
+      Class* newClass = makeNode<Class>();
       // TODO: assert that class name is not a builtin type
       release_assert(!v0->typeClass);
       v0->typeClass = newClass;
@@ -48,7 +48,7 @@ const char* wlangGrammarStr = R"STR(
   ClassMemberList <{void}> <{Class* newClass}> =
     Type $Id TheRestOfADeclaration
     {{
-      VariableDeclaration* variableDeclaration = ctx.makeNode<VariableDeclaration>();
+      VariableDeclaration* variableDeclaration = makeNode<VariableDeclaration>();
       variableDeclaration->type = v0;
       variableDeclaration->name = v1;
       variableDeclaration->initialiser = v2;
@@ -67,8 +67,8 @@ const char* wlangGrammarStr = R"STR(
   Func <{Func*}> =
     Type $Id
     {{
-      Func* func = ctx.makeNode<Func>();
-      func->argsScope = ctx.makeNode<Scope>();
+      Func* func = makeNode<Func>();
+      func->argsScope = makeNode<Scope>();
       func->returnType = v0;
       func->name = std::move(v1);
     }}
@@ -83,14 +83,14 @@ const char* wlangGrammarStr = R"STR(
   Block <{Block*}> =
     "{"
     {{
-      Block* block = ctx.makeNode<Block>();
-      block->scope = ctx.makeNode<Scope>();
-      block->scope->parent = ctx.getScope();
-      ctx.pushScope(block->scope);
+      Block* block = makeNode<Block>();
+      block->scope = makeNode<Scope>();
+      block->scope->parent = getScope();
+      pushScope(block->scope);
     }}
     StatementList<{block}> "}"
     {{
-      ctx.popScope();
+      popScope();
       return block;
     }}
   ;
@@ -105,34 +105,34 @@ const char* wlangGrammarStr = R"STR(
 
 
   Statement <{Statement*}>
-    {{ Statement* statement = ctx.makeNode<Statement>(); }}
+    {{ Statement* statement = makeNode<Statement>(); }}
   =
     {{
-      ReturnStatement* returnStatement = ctx.makeNode<ReturnStatement>();
+      ReturnStatement* returnStatement = makeNode<ReturnStatement>();
       IntermediateExpression intermediate;
     }}
     "return" Expression<{intermediate}> ";"
     {{
-      returnStatement->retval = resolveIntermediateExpression(ctx, std::move(intermediate));
+      returnStatement->retval = resolveIntermediateExpression(std::move(intermediate));
       *statement = returnStatement;
     }}
   |
-    {{ IfElseChain* ifElseChain = ctx.makeNode<IfElseChain>(); }}
+    {{ IfElseChain* ifElseChain = makeNode<IfElseChain>(); }}
     "if" TheRestOfAnIf<{*ifElseChain}>
     {{ *statement = ifElseChain; }}
   |
     // declaration, or an expression that starts with $Id
     // This awkwardness exists because declarations (and assignments) are not expressions, which is a design choice
     // We basically need to copy paste the rules from Expression into Statement, so we can allow any expression as a statement
-    {{ SourceRange idSource = ctx.peek().source; }}
+    {{ SourceRange idSource = peek().source; }}
     $Id StatementThatStartsWithId <{v0, idSource, statement}> ";"
   |
     // statement that starts with an expression that starts with $Int32
     $Int32
     {{
-      Expression* partial = ctx.makeNode<Expression>();
+      Expression* partial = makeNode<Expression>();
       partial->val = v0;
-      partial->source = ctx.lastPopped().source;
+      partial->source = lastPopped().source;
       IntermediateExpression intermediate;
       intermediate.emplace_back(partial, partial->source);
     }}
@@ -142,7 +142,7 @@ const char* wlangGrammarStr = R"STR(
     "!"
     {{
       IntermediateExpression intermediate;
-      intermediate.emplace_back(Op::Type::LogicalNot, ctx.lastPopped().source);
+      intermediate.emplace_back(Op::Type::LogicalNot, lastPopped().source);
     }}
     Expression<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}> ";"
   |
@@ -150,16 +150,16 @@ const char* wlangGrammarStr = R"STR(
     "-"
     {{
       IntermediateExpression intermediate;
-      intermediate.emplace_back(Op::Type::UnaryMinus, ctx.lastPopped().source);
+      intermediate.emplace_back(Op::Type::UnaryMinus, lastPopped().source);
     }}
     Expression<{intermediate}> TheRestOfAStatement<{std::move(intermediate), statement}> ";"
   |
     // statement that starts with an expression that starts with false (again, why would you want this?)
     "false"
     {{
-      Expression* partial = ctx.makeNode<Expression>();
+      Expression* partial = makeNode<Expression>();
       partial->val = false;
-      partial->source = ctx.lastPopped().source;
+      partial->source = lastPopped().source;
       IntermediateExpression intermediate;
       intermediate.emplace_back(partial, partial->source);
     }}
@@ -168,9 +168,9 @@ const char* wlangGrammarStr = R"STR(
     // statement that starts with an expression that starts with true (again, why would you want this?)
     "true"
     {{
-      Expression* partial = ctx.makeNode<Expression>();
+      Expression* partial = makeNode<Expression>();
       partial->val = true;
-      partial->source = ctx.lastPopped().source;
+      partial->source = lastPopped().source;
       IntermediateExpression intermediate;
       intermediate.emplace_back(partial, partial->source);
     }}
@@ -184,8 +184,8 @@ const char* wlangGrammarStr = R"STR(
     {{ IntermediateExpression intermediate; }}
     "(" Expression<{intermediate}> ")" Block
     {{
-      IfElseChainItem* item = ctx.makeNode<IfElseChainItem>();
-      item->condition = resolveIntermediateExpression(ctx, std::move(intermediate));
+      IfElseChainItem* item = makeNode<IfElseChainItem>();
+      item->condition = resolveIntermediateExpression(std::move(intermediate));
       item->block = v0;
       chain.items.emplace_back(item);
     }}
@@ -207,7 +207,7 @@ const char* wlangGrammarStr = R"STR(
   |
     Block
     {{
-      IfElseChainItem* item = ctx.makeNode<IfElseChainItem>();
+      IfElseChainItem* item = makeNode<IfElseChainItem>();
       item->block = v0;
       chain.items.emplace_back(item);
     }}
@@ -217,25 +217,25 @@ const char* wlangGrammarStr = R"STR(
   StatementThatStartsWithId <{void}> <{const std::string& id, SourceRange idSource, Statement* statement}> =
     // declaration
     {{
-      VariableDeclaration* variableDeclaration = ctx.makeNode<VariableDeclaration>();
-      variableDeclaration->type = TypeRef { .type = getOrCreateType(ctx, id) };
+      VariableDeclaration* variableDeclaration = makeNode<VariableDeclaration>();
+      variableDeclaration->type = TypeRef { .type = getOrCreateType(id) };
     }}
     Type'<{variableDeclaration->type}>
     $Id TheRestOfADeclaration
     {{
-      SourceRange declarationEnd = ctx.lastPopped().source;
+      SourceRange declarationEnd = lastPopped().source;
 
       variableDeclaration->name = v0;
       variableDeclaration->initialiser = v1;
       variableDeclaration->source = SourceRange(idSource.start, declarationEnd.end);
 
-      ctx.getScope()->variables.insert_or_assign(variableDeclaration->name, variableDeclaration);
+      getScope()->variables.insert_or_assign(variableDeclaration->name, variableDeclaration);
       *statement = variableDeclaration;
     }}
   |
     // assign, or standalone expression that starts with id
     {{
-      Expression* partial = ctx.makeNode<Expression>();
+      Expression* partial = makeNode<Expression>();
       partial->val = id;
       partial->source = idSource;
 
@@ -252,7 +252,7 @@ const char* wlangGrammarStr = R"STR(
   |
     Nil
     {{
-      Expression* expression = ctx.makeNode<Expression>();
+      Expression* expression = makeNode<Expression>();
       expression->val = id;
       *statement = expression;
     }}
@@ -262,7 +262,7 @@ const char* wlangGrammarStr = R"STR(
   TheRestOfADeclaration <{Expression*}> =
     {{ IntermediateExpression intermediateExpression; }}
     "=" Expression<{intermediateExpression}>
-    {{ return resolveIntermediateExpression(ctx, std::move(intermediateExpression)); }}
+    {{ return resolveIntermediateExpression(std::move(intermediateExpression)); }}
   |
     Nil
     {{ return nullptr; }}
@@ -276,22 +276,22 @@ const char* wlangGrammarStr = R"STR(
     }}
     Expression<{intermediateR}>
     {{
-      Assignment* assignment = ctx.makeNode<Assignment>();
-      assignment->left = resolveIntermediateExpression(ctx, std::move(intermediateExpression));
-      assignment->right = resolveIntermediateExpression(ctx, std::move(intermediateR));
+      Assignment* assignment = makeNode<Assignment>();
+      assignment->left = resolveIntermediateExpression(std::move(intermediateExpression));
+      assignment->right = resolveIntermediateExpression(std::move(intermediateR));
       *statement = assignment;
     }}
   |
     Nil
-    {{ *statement = resolveIntermediateExpression(ctx, std::move(intermediateExpression)); }};
+    {{ *statement = resolveIntermediateExpression(std::move(intermediateExpression)); }};
 
 
   Expression <{void}> <{IntermediateExpression& result}>
-     {{ SourceRange source = ctx.peek().source; }}
+     {{ SourceRange source = peek().source; }}
   =
     $Id
     {{
-      Expression* expression = ctx.makeNode<Expression>();
+      Expression* expression = makeNode<Expression>();
       expression->val = v0;
       expression->source = source;
       result.emplace_back(expression, expression->source);
@@ -299,7 +299,7 @@ const char* wlangGrammarStr = R"STR(
   |
     $Int32
     {{
-      Expression* expression = ctx.makeNode<Expression>();
+      Expression* expression = makeNode<Expression>();
       expression->val = v0;
       expression->source = source;
       result.emplace_back(expression, expression->source);
@@ -307,7 +307,7 @@ const char* wlangGrammarStr = R"STR(
   |
     "false"
     {{
-      Expression* expression = ctx.makeNode<Expression>();
+      Expression* expression = makeNode<Expression>();
       expression->val = false;
       expression->source = source;
       result.emplace_back(expression, expression->source);
@@ -315,7 +315,7 @@ const char* wlangGrammarStr = R"STR(
   |
     "true"
     {{
-      Expression* expression = ctx.makeNode<Expression>();
+      Expression* expression = makeNode<Expression>();
       expression->val = true;
       expression->source = source;
       result.emplace_back(expression, expression->source);
@@ -334,39 +334,39 @@ const char* wlangGrammarStr = R"STR(
 
 
   Expression'NoMul <{void}> <{IntermediateExpression& result}> =
-    {{ result.emplace_back(Op::Type::CompareEqual, ctx.peek().source); }}
+    {{ result.emplace_back(Op::Type::CompareEqual, peek().source); }}
     "==" Expression<{result}>
   |
-    {{ result.emplace_back(Op::Type::CompareNotEqual, ctx.peek().source); }}
+    {{ result.emplace_back(Op::Type::CompareNotEqual, peek().source); }}
     "!=" Expression<{result}>
   |
-    {{ result.emplace_back(Op::Type::LogicalAnd, ctx.peek().source); }}
+    {{ result.emplace_back(Op::Type::LogicalAnd, peek().source); }}
     "&&" Expression<{result}>
   |
-    {{ result.emplace_back(Op::Type::LogicalOr, ctx.peek().source); }}
+    {{ result.emplace_back(Op::Type::LogicalOr, peek().source); }}
     "||" Expression<{result}>
   |
-    {{ result.emplace_back(Op::Type::Add, ctx.peek().source); }}
+    {{ result.emplace_back(Op::Type::Add, peek().source); }}
     "+" Expression<{result}>
   |
-    {{ result.emplace_back(Op::Type::Subtract, ctx.peek().source); }}
+    {{ result.emplace_back(Op::Type::Subtract, peek().source); }}
     "-" Expression<{result}>
   |
-    {{ result.emplace_back(Op::Type::Divide, ctx.peek().source); }}
+    {{ result.emplace_back(Op::Type::Divide, peek().source); }}
     "/" Expression<{result}>
   |
-    {{ result.emplace_back(Op::Type::MemberAccess, ctx.peek().source); }}
+    {{ result.emplace_back(Op::Type::MemberAccess, peek().source); }}
     "." Expression<{result}>
   |
     {{
-      result.emplace_back(Op::Type::Call, ctx.peek().source);
+      result.emplace_back(Op::Type::Call, peek().source);
       std::vector<Expression*> argList;
-      SourceRange openBracket = ctx.peek().source;
+      SourceRange openBracket = peek().source;
      }}
     "("
      CallParamList<{argList}>
     {{
-      SourceRange closeBracket = ctx.peek().source;
+      SourceRange closeBracket = peek().source;
       result.emplace_back(std::move(argList), SourceRange(openBracket.start, closeBracket.end));
     }}
     ")"
@@ -375,7 +375,7 @@ const char* wlangGrammarStr = R"STR(
 
 
   Expression' <{void}> <{IntermediateExpression& result}> =
-    {{ result.emplace_back(Op::Type::Multiply, ctx.peek().source); }}
+    {{ result.emplace_back(Op::Type::Multiply, peek().source); }}
     "*" Expression<{result}>
   |
     Expression'NoMul<{result}>
@@ -384,7 +384,7 @@ const char* wlangGrammarStr = R"STR(
   CallParamList <{void}> <{std::vector<Expression*>& argList}> =
     {{ IntermediateExpression intermediateExpression; }}
     Expression<{intermediateExpression}>
-    {{ argList.emplace_back(resolveIntermediateExpression(ctx, std::move(intermediateExpression))); }}
+    {{ argList.emplace_back(resolveIntermediateExpression(std::move(intermediateExpression))); }}
     CallParamList'<{argList}>
   |
     Nil;
@@ -407,7 +407,7 @@ const char* wlangGrammarStr = R"STR(
     Nil;
 
   BaseType <{Type*}> =
-    $Id {{ return getOrCreateType(ctx, v0); }};
+    $Id {{ return getOrCreateType(v0); }};
 
   ArgList <{void}> <{Func* func}> =
     Arg
@@ -429,7 +429,7 @@ const char* wlangGrammarStr = R"STR(
   Arg <{VariableDeclaration*}> =
     Type $Id
     {{
-      VariableDeclaration* arg = ctx.makeNode<VariableDeclaration>();
+      VariableDeclaration* arg = makeNode<VariableDeclaration>();
       arg->type = v0;
       arg->name = v1;
       return arg;

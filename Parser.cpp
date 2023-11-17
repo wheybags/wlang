@@ -4,28 +4,37 @@
 #include "Assert.hpp"
 #include "BuiltinTypes.hpp"
 
-template<typename T> T* AstChunk::makeNode()
-{
-  constexpr size_t blockSize = 256;
-  if (nodeBlocks.empty() || nodeBlocks.back().size() == blockSize)
-  {
-    nodeBlocks.resize(nodeBlocks.size() + 1);
-    nodeBlocks.back().reserve(blockSize);
-  }
 
-  NodeBlock& currentBlock = nodeBlocks.back();
-  Node& node = currentBlock.emplace_back(T());
-  return &std::get<T>(node);
-}
-
-class ParseContext
+class Parser
 {
 public:
-  ParseContext(AstChunk& ast, const Token* tokens, size_t size)
+  Parser(AstChunk& ast, const Token* tokens, size_t size)
     : ast(ast)
     , next(tokens)
     , remaining(size)
   {}
+
+  struct IntermediateExpressionItem
+  {
+    #define FOR_EACH_TAGGED_UNION_TYPE(XX) \
+      XX(expression, Expression, Expression*) \
+      XX(op, Op, Op::Type) \
+      XX(callArgs, CallArgs, std::vector<Expression*>)
+
+    #define CLASS_NAME Val
+    #include "CreateTaggedUnion.hpp"
+
+    Val val;
+    SourceRange source;
+  };
+
+  using IntermediateExpression = std::vector<IntermediateExpressionItem>;
+  Expression* resolveIntermediateExpression(IntermediateExpression&& intermediate);
+  std::string parseId();
+  int32_t parseInt32();
+  Type* getOrCreateType(const std::string& typeName);
+
+  #include "ParserRulesDeclarations.inl"
 
   const Token& peek()
   {
@@ -68,27 +77,39 @@ public:
   void pushScope(Scope* scope) { scopeStack.push_back(scope); }
   void popScope() { scopeStack.pop_back(); }
 
-public:
-  AstChunk& ast;
   template<typename T> T* makeNode() { return ast.makeNode<T>(); }
 
-  std::unordered_map<std::string, Type*> referencedTypes;
+public:
+  AstChunk& ast;
 
-private:
   std::vector<Scope*> scopeStack;
   const Token* next = nullptr;
   size_t remaining = 0;
-
   const Token* popped = nullptr;
 };
 
-Parser::Parser() = default;
+AstChunk parse(const std::vector<Token>& tokens)
+{
+  AstChunk ast;
+  Parser parser(ast, tokens.data(), tokens.size());
+  ast.root = parser.parseRoot();
 
-Expression* Parser::resolveIntermediateExpression(ParseContext& ctx, IntermediateExpression&& intermediate)
+  for (auto& pair : ast.referencedTypes)
+  {
+    if (pair.second->typeClass)
+      ast.createdTypes.emplace_back(pair.second);
+    else if (!pair.second->builtin)
+      ast.importedTypes.emplace_back(pair.second);
+  }
+
+  return ast;
+}
+
+Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& intermediate)
 {
   auto outputOp = [&](Op::Type op, int32_t& i)
   {
-    Op* opNode = ctx.makeNode<Op>();
+    Op* opNode = makeNode<Op>();
 
     switch (op)
     {
@@ -102,7 +123,7 @@ Expression* Parser::resolveIntermediateExpression(ParseContext& ctx, Intermediat
         intermediate.erase(intermediate.begin() + i, intermediate.begin() + (i+2));
 
         opNode->type = op;
-        Expression* expression = ctx.makeNode<Expression>();
+        Expression* expression = makeNode<Expression>();
         expression->val = opNode;
         expression->source = SourceRange(opNode->left->source.start, args.source.end);
 
@@ -117,7 +138,7 @@ Expression* Parser::resolveIntermediateExpression(ParseContext& ctx, Intermediat
         intermediate.erase(intermediate.begin() + i, intermediate.begin() + (i+1));
 
         opNode->type = op;
-        Expression* expression = ctx.makeNode<Expression>();
+        Expression* expression = makeNode<Expression>();
         expression->val = opNode;
         expression->source = SourceRange(intermediate[i].source.start, opNode->left->source.end);
 
@@ -139,7 +160,7 @@ Expression* Parser::resolveIntermediateExpression(ParseContext& ctx, Intermediat
         intermediate.erase(intermediate.begin() + i, intermediate.begin() + (i+2));
 
         opNode->type = op;
-        Expression* expression = ctx.makeNode<Expression>();
+        Expression* expression = makeNode<Expression>();
         expression->val = opNode;
         expression->source = SourceRange(opNode->left->source.start, opNode->right->source.end);
 
@@ -237,47 +258,30 @@ Expression* Parser::resolveIntermediateExpression(ParseContext& ctx, Intermediat
   return intermediate[0].val.expression();
 }
 
-AstChunk Parser::parse(const std::vector<Token>& tokenStrings)
+std::string Parser::parseId()
 {
-  AstChunk ast;
-  ParseContext ctx(ast, tokenStrings.data(), tokenStrings.size());
-  ast.root = parseRoot(ctx);
-
-  for (auto& pair : ctx.referencedTypes)
-  {
-    if (pair.second->typeClass)
-      ast.createdTypes.emplace_back(pair.second);
-    else if (!pair.second->builtin)
-      ast.importedTypes.emplace_back(pair.second);
-  }
-
-  return ast;
+  release_assert(peek().type == Token::Type::Id);
+  return pop().idValue;
 }
 
-std::string Parser::parseId(ParseContext& ctx)
+int32_t Parser::parseInt32()
 {
-  release_assert(ctx.peek().type == Token::Type::Id);
-  return ctx.pop().idValue;
+  release_assert(peek().type == Token::Type::Int32);
+  return pop().i32Value;
 }
 
-int32_t Parser::parseInt32(ParseContext& ctx)
-{
-  release_assert(ctx.peek().type == Token::Type::Int32);
-  return ctx.pop().i32Value;
-}
-
-Type* Parser::getOrCreateType(ParseContext& ctx, const std::string& typeName)
+Type* Parser::getOrCreateType(const std::string& typeName)
 {
   if (Type* builtin = BuiltinTypes::inst.get(typeName))
     return builtin;
 
-  auto it = ctx.referencedTypes.find(typeName);
+  auto it = ast.referencedTypes.find(typeName);
 
-  if (it == ctx.referencedTypes.end())
+  if (it == ast.referencedTypes.end())
   {
-    Type* type = ctx.makeNode<Type>();
+    Type* type = makeNode<Type>();
     type->name = typeName;
-    ctx.referencedTypes.emplace_hint(it, typeName, type);
+    ast.referencedTypes.emplace_hint(it, typeName, type);
     return type;
   }
   else

@@ -136,9 +136,9 @@ ParserSource generateParser(const Grammar& grammar)
       if (!rule.returnType.empty())
         returnType = rule.returnType;
 
-      std::string argsList = "ParseContext& ctx";
+      std::string argsList;
       if (!rule.arguments.empty())
-        argsList += ", " + rule.arguments;
+        argsList = rule.arguments;
 
       appendSourceLine(returnType + " Parser::parse" + sanitiseName(name) + "(" + argsList + ")");
 
@@ -164,7 +164,7 @@ ParserSource generateParser(const Grammar& grammar)
       {
         if (item == "Nil")
           continue;
-        firstsCheck += "ctx.peekCheck(TT::" + tokenTypeMapping.at(item) + ") || ";
+        firstsCheck += "peekCheck(TT::" + tokenTypeMapping.at(item) + ") || ";
       }
 
       if (firstsCheck.empty())
@@ -204,16 +204,16 @@ ParserSource generateParser(const Grammar& grammar)
             std::string callLine = it->second + " v" + std::to_string(variableIndex) + " = ";
             variableIndex++;
 
-            callLine += "parse" + tokenTypeMapping.at(item.str()) + "(ctx);";
+            callLine += "parse" + tokenTypeMapping.at(item.str()) + "();";
             appendSourceLine(callLine);
           }
           else if (productionIndex == 0)
           {
-            appendSourceLine("ctx.pop();");
+            appendSourceLine("pop();");
           }
           else
           {
-            appendSourceLine("release_assert(ctx.popCheck(TT::" + tokenTypeMapping.at(item.str()) + "));");
+            appendSourceLine("release_assert(popCheck(TT::" + tokenTypeMapping.at(item.str()) + "));");
           }
         }
         else
@@ -225,9 +225,9 @@ ParserSource generateParser(const Grammar& grammar)
             variableIndex++;
           }
 
-          std::string args = "ctx";
+          std::string args;
           if (!item.parameters.empty())
-            args += ", " + item.parameters;
+            args = item.parameters;
 
           callLine += "parse" + sanitiseName(item.nonTerminal().name) + "(" + args + ");";
 
@@ -261,7 +261,7 @@ ParserSource generateParser(const Grammar& grammar)
 
       std::string followsCheck;
       for (const std::string& item: follows)
-        followsCheck += "ctx.peekCheck(TT::" + tokenTypeMapping.at(item) + ") || ";
+        followsCheck += "peekCheck(TT::" + tokenTypeMapping.at(item) + ") || ";
 
       release_assert(!followsCheck.empty());
       followsCheck.resize(followsCheck.size() - 4);

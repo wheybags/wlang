@@ -69,8 +69,7 @@ std::string inputString = R"STRING_RAW(
 int main()
 {
   std::vector<Token> tokens = tokenise(inputString);
-  Parser parser;
-  AstChunk ast = parser.parse(tokens);
+  AstChunk ast = parse(tokens);
 
   std::string json;
   dumpJson(ast.root, json);
