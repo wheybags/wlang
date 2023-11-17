@@ -1,13 +1,9 @@
 #pragma once
 #include "Ast.hpp"
 
-class Parser;
-
 class SemanticAnalyser
 {
 public:
-  SemanticAnalyser(Parser& parser) : parser(parser) {}
-
   void run(Root* root);
 
 private:
@@ -21,7 +17,8 @@ private:
   void run(ReturnStatement* returnStatement, Func* func);
   void run(IfElseChain* ifElseChain, Func* func);
 
+  bool typeDefined(Type* type);
+
 private:
-  Parser& parser;
   std::vector<Scope*> scopeStack;
 };

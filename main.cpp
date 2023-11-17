@@ -15,6 +15,7 @@ std::string inputString = R"STRING_RAW(
 
   i32 ff(Vec2i* vec)
   {
+//    Vec2f uuu;
     false;
     bool a = true;
     vec.x = 1;
@@ -69,18 +70,18 @@ int main()
 {
   std::vector<Token> tokens = tokenise(inputString);
   Parser parser;
-  Root* ast = parser.parse(tokens);
+  AstChunk ast = parser.parse(tokens);
 
   std::string json;
-  dumpJson(ast, json);
+  dumpJson(ast.root, json);
   puts(json.c_str());
   puts("\n");
 
-  SemanticAnalyser semanticAnalyser(parser);
-  semanticAnalyser.run(ast);
+  SemanticAnalyser semanticAnalyser;
+  semanticAnalyser.run(ast.root);
 
   PlainCGenerator generator;
-  puts(generator.generate(ast).c_str());
+  puts(generator.generate(ast.root).c_str());
 
   return 0;
 }

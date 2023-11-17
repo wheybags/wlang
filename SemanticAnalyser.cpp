@@ -1,6 +1,5 @@
 #pragma once
 #include "SemanticAnalyser.hpp"
-#include "Parser.hpp"
 #include "BuiltinTypes.hpp"
 
 void SemanticAnalyser::run(Root* root)
@@ -15,6 +14,7 @@ void SemanticAnalyser::run(Root* root)
 
 void SemanticAnalyser::run(Func* func)
 {
+  release_assert(typeDefined(func->returnType.type));
   run(func->funcBody, func);
 }
 
@@ -201,6 +201,9 @@ void SemanticAnalyser::run(Expression* expression)
 
 void SemanticAnalyser::run(VariableDeclaration* variableDeclaration)
 {
+  release_assert(variableDeclaration->type.type);
+  release_assert(typeDefined(variableDeclaration->type.type));
+
   if (variableDeclaration->initialiser)
   {
     run(variableDeclaration->initialiser);
@@ -232,5 +235,10 @@ void SemanticAnalyser::run(IfElseChain* ifElseChain, Func* func)
 
     run(item->block, func);
   }
+}
+
+bool SemanticAnalyser::typeDefined(Type* type)
+{
+  return type->builtin || type->typeClass;
 }
 

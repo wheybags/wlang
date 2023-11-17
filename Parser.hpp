@@ -8,16 +8,43 @@
 
 class ParseContext;
 
+class AstChunk
+{
+public:
+  AstChunk() = default;
+  AstChunk(const AstChunk&) = delete;
+  AstChunk(AstChunk&&) noexcept = default;
+  ~AstChunk() = default;
+  AstChunk& operator=(const AstChunk&) = delete;
+  AstChunk& operator=(AstChunk&&) = default;
+
+  template<typename T> T* makeNode();
+
+public:
+  Root* root = nullptr;
+  std::vector<Type*> createdTypes;
+  std::vector<Type*> importedTypes;
+
+private:
+  using Node = std::variant<
+    std::monostate,
+# define X(Type) Type,
+    FOR_EACH_AST_TYPE
+# undef X
+    Scope>;
+
+  using NodeBlock = std::vector<Node>;
+  std::vector<NodeBlock> nodeBlocks;
+};
+
 class Parser
 {
 public:
   Parser();
 
-  Root* parse(const std::vector<Token>& tokens);
+  AstChunk parse(const std::vector<Token>& tokens);
 
 private:
-  template<typename T> T* makeNode();
-
   struct IntermediateExpressionItem
   {
     #define FOR_EACH_TAGGED_UNION_TYPE(XX) \
@@ -33,26 +60,12 @@ private:
   };
 
   using IntermediateExpression = std::vector<IntermediateExpressionItem>;
-  Expression* resolveIntermediateExpression(IntermediateExpression&& intermediate);
+  Expression* resolveIntermediateExpression(ParseContext& ctx, IntermediateExpression&& intermediate);
   std::string parseId(ParseContext& ctx);
   int32_t parseInt32(ParseContext& ctx);
-  Type* getOrCreateType(const std::string& typeName);
+  Type* getOrCreateType(ParseContext& ctx, const std::string& typeName);
 
-#include "ParserRulesDeclarations.inl"
-
-private:
-  using Node = std::variant<
-    std::monostate,
-# define X(Type) Type,
-    FOR_EACH_AST_TYPE
-# undef X
-    Scope>;
-
-  using NodeBlock = std::vector<Node>;
-  std::vector<NodeBlock> nodeBlocks;
-
-  std::unordered_map<std::string, Type*> types;
-  std::vector<const Assignment*> assignments;
+  #include "ParserRulesDeclarations.inl"
 };
 
 

@@ -20,16 +20,29 @@ struct Op;
 struct IfElseChain;
 struct IfElseChainItem;
 
+
+struct Scope;
+
+struct Type
+{
+  std::string name;
+  bool builtin = false;
+
+  // user defined types will have a class, builtins have only name
+  Class* typeClass = nullptr;
+};
+
 struct TypeRef
 {
   Type* type = nullptr;
   int32_t pointerDepth = 0;
 
-  bool operator==(const TypeRef&) const = default;
-  bool operator!=(const TypeRef&) const = default;
+  bool operator==(const TypeRef& other) const
+  {
+    return pointerDepth == other.pointerDepth && (type == other.type || (type && other.type && type->typeClass && type->typeClass == other.type->typeClass));
+  }
+  bool operator!=(const TypeRef& other) const { return !(*this == other); }
 };
-
-struct Scope;
 
 class Expression
 {
@@ -109,14 +122,6 @@ struct Assignment
 struct ReturnStatement
 {
   Expression* retval = nullptr;
-};
-
-struct Type
-{
-  std::string name;
-
-  // user defined types will have a class, builtins have only name
-  Class* typeClass = nullptr;
 };
 
 struct Op
