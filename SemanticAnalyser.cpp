@@ -1,6 +1,7 @@
 #pragma once
 #include "SemanticAnalyser.hpp"
 #include "Parser.hpp"
+#include "BuiltinTypes.hpp"
 
 void SemanticAnalyser::run(Root* root)
 {
@@ -90,13 +91,13 @@ void SemanticAnalyser::run(Expression* expression)
 
     case Expression::Val::Tag::Int32:
     {
-      expression->type = { .type = this->parser.tInt32 };
+      expression->type = { .type = &BuiltinTypes::inst.tI32 };
       break;
     }
 
     case Expression::Val::Tag::Bool:
     {
-      expression->type = { .type = this->parser.tBool };
+      expression->type = { .type = &BuiltinTypes::inst.tBool };
       break;
     }
 
@@ -113,7 +114,7 @@ void SemanticAnalyser::run(Expression* expression)
           run(op->left);
           run(op->right);
           release_assert(op->left->type == op->right->type);
-          expression->type = { .type = this->parser.tBool };
+          expression->type = { .type = &BuiltinTypes::inst.tBool };
           break;
         }
 
@@ -121,17 +122,17 @@ void SemanticAnalyser::run(Expression* expression)
         {
           run(op->left);
           release_assert(op->left->type.pointerDepth > 0 ||
-                         op->left->type.type == this->parser.tBool ||
-                         op->left->type.type == this->parser.tInt32);
-          expression->type = { .type = this->parser.tBool };
+                         op->left->type.type == &BuiltinTypes::inst.tBool ||
+                         op->left->type.type == &BuiltinTypes::inst.tI32);
+          expression->type = { .type = &BuiltinTypes::inst.tBool };
           break;
         }
 
         case Op::Type::UnaryMinus:
         {
           run(op->left);
-          release_assert(op->left->type.type == this->parser.tInt32);
-          expression->type = { .type = this->parser.tInt32 };
+          release_assert(op->left->type.type == &BuiltinTypes::inst.tI32);
+          expression->type = { .type = &BuiltinTypes::inst.tI32 };
           break;
         }
 
@@ -180,9 +181,9 @@ void SemanticAnalyser::run(Expression* expression)
         {
           run(op->left);
           run(op->right);
-          release_assert(op->left->type == TypeRef{ .type = this->parser.tInt32 });
-          release_assert(op->right->type == TypeRef{ .type = this->parser.tInt32 });
-          expression->type = { .type = this->parser.tInt32 };
+          release_assert(op->left->type == TypeRef{ .type = &BuiltinTypes::inst.tI32 });
+          release_assert(op->right->type == TypeRef{ .type = &BuiltinTypes::inst.tI32 });
+          expression->type = { .type = &BuiltinTypes::inst.tI32 };
           break;
         }
         case Op::Type::ENUM_END:
@@ -222,7 +223,7 @@ void SemanticAnalyser::run(IfElseChain* ifElseChain, Func* func)
     if (item->condition)
     {
       run(item->condition);
-      release_assert(item->condition->type == TypeRef{ .type = this->parser.tBool });
+      release_assert(item->condition->type == TypeRef{ .type = &BuiltinTypes::inst.tBool });
     }
     else
     {

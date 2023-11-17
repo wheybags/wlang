@@ -14,11 +14,6 @@ public:
   Parser();
 
   Root* parse(const std::vector<Token>& tokens);
-  Type* getType(const std::string& typeName);
-
-public:
-  Type* tInt32 = nullptr;
-  Type* tBool = nullptr;
 
 private:
   template<typename T> T* makeNode();

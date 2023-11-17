@@ -2,6 +2,7 @@
 #include <optional>
 #include <unordered_set>
 #include "Assert.hpp"
+#include "BuiltinTypes.hpp"
 
 class ParseContext
 {
@@ -60,11 +61,7 @@ private:
   const Token* popped = nullptr;
 };
 
-Parser::Parser()
-{
-  tInt32 = getOrCreateType("i32");
-  tBool = getOrCreateType("bool");
-}
+Parser::Parser() = default;
 
 Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& intermediate)
 {
@@ -253,6 +250,9 @@ int32_t Parser::parseInt32(ParseContext& ctx)
 
 Type* Parser::getOrCreateType(const std::string& typeName)
 {
+  if (Type* builtin = BuiltinTypes::inst.get(typeName))
+    return builtin;
+
   auto it = types.find(typeName);
 
   if (it == types.end())
@@ -266,16 +266,6 @@ Type* Parser::getOrCreateType(const std::string& typeName)
   {
     return it->second;
   }
-}
-
-Type* Parser::getType(const std::string& typeName)
-{
-  auto it = types.find(typeName);
-
-  if (it == types.end())
-    return nullptr;
-  else
-    return it->second;
 }
 
 #include "ParserRules.inl"
