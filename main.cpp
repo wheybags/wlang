@@ -71,11 +71,6 @@ int main()
   std::vector<Token> tokens = tokenise(inputString);
   AstChunk ast = parse(tokens);
 
-  std::string json;
-  dumpJson(ast.root, json);
-  puts(json.c_str());
-  puts("\n");
-
   SemanticAnalyser semanticAnalyser;
   semanticAnalyser.run(ast.root);
 

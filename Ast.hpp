@@ -178,25 +178,3 @@ struct Scope
 
   ScopeItem lookup(const std::string& name);
 };
-
-
-#define FOR_EACH_AST_TYPE \
-  X(Root) \
-  X(FuncList) \
-  X(Func) \
-  X(Block) \
-  X(Statement) \
-  X(VariableDeclaration) \
-  X(Assignment) \
-  X(ReturnStatement) \
-  X(Type) \
-  X(Expression) \
-  X(Op) \
-  X(Class) \
-  X(IfElseChain) \
-  X(IfElseChainItem)
-
-# define X(Type) void dumpJson(const Type* node, std::string& str, int32_t tabIndex = 0);
-FOR_EACH_AST_TYPE
-# undef X
-

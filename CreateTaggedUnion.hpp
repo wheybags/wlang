@@ -28,6 +28,8 @@
 
 #define GEN_UNION_MEMBERS(name, nameCap, type) type _ ## name;
 
+#define GEN_TEMPLATE_GETTER(name, nameCap, type) if constexpr (std::is_same<T, type>::value) return name();
+
 class CLASS_NAME
 {
 public:
@@ -85,6 +87,18 @@ public:
 
   FOR_EACH_TAGGED_UNION_TYPE(GEN_IS_XX)
   FOR_EACH_TAGGED_UNION_TYPE(GEN_GETTERS)
+
+  template<typename T>
+  T& get()
+  {
+    FOR_EACH_TAGGED_UNION_TYPE(GEN_TEMPLATE_GETTER)
+  }
+
+  template<typename T>
+  const T& get() const
+  {
+    FOR_EACH_TAGGED_UNION_TYPE(GEN_TEMPLATE_GETTER)
+  }
 
 private:
   Tag _tag = Tag::None;
