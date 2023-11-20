@@ -30,6 +30,8 @@ struct Type
 
   // user defined types will have a class, builtins have only name
   Class* typeClass = nullptr;
+
+  bool defined() const { return builtin || typeClass; }
 };
 
 struct TypeRef

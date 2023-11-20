@@ -1,6 +1,13 @@
 #pragma once
 #include "SemanticAnalyser.hpp"
 #include "BuiltinTypes.hpp"
+#include "MergedAst.hpp"
+
+void SemanticAnalyser::run(MergedAst& ast)
+{
+  for (AstChunk* chunk : ast)
+    run(chunk->root);
+}
 
 void SemanticAnalyser::run(Root* root)
 {
@@ -14,7 +21,7 @@ void SemanticAnalyser::run(Root* root)
 
 void SemanticAnalyser::run(Func* func)
 {
-  release_assert(typeDefined(func->returnType.type));
+  release_assert(func->returnType.type->defined());
   run(func->funcBody, func);
 }
 
@@ -202,7 +209,7 @@ void SemanticAnalyser::run(Expression* expression)
 void SemanticAnalyser::run(VariableDeclaration* variableDeclaration)
 {
   release_assert(variableDeclaration->type.type);
-  release_assert(typeDefined(variableDeclaration->type.type));
+  release_assert(variableDeclaration->type.type->defined());
 
   if (variableDeclaration->initialiser)
   {
@@ -235,10 +242,5 @@ void SemanticAnalyser::run(IfElseChain* ifElseChain, Func* func)
 
     run(item->block, func);
   }
-}
-
-bool SemanticAnalyser::typeDefined(Type* type)
-{
-  return type->builtin || type->typeClass;
 }
 

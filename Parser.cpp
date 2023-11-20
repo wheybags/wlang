@@ -88,9 +88,8 @@ public:
   const Token* popped = nullptr;
 };
 
-AstChunk parse(const std::vector<Token>& tokens)
+void parse(AstChunk& ast, const std::vector<Token>& tokens)
 {
-  AstChunk ast;
   Parser parser(ast, tokens.data(), tokens.size());
   ast.root = parser.parseRoot();
 
@@ -101,8 +100,6 @@ AstChunk parse(const std::vector<Token>& tokens)
     else if (!pair.second->builtin)
       ast.importedTypes.emplace_back(pair.second);
   }
-
-  return ast;
 }
 
 Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& intermediate)

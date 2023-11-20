@@ -2,17 +2,17 @@
 #include "Parser.hpp"
 #include "PlainCGenerator.hpp"
 #include "SemanticAnalyser.hpp"
+#include "MergedAst.hpp"
 
-std::string inputString = R"STRING_RAW(
+std::string otherW = R"STRING_RAW(
   bool b()
   {
-    bool xxx = false;
-    bool z = xxx;
-    bool y = true;
-    return z;
+    return false;
   }
+)STRING_RAW";
 
 
+std::string mainW = R"STRING_RAW(
   i32 ff(Vec2i* vec)
   {
 //    Vec2f uuu;
@@ -54,6 +54,7 @@ std::string inputString = R"STRING_RAW(
 
   i32 main()
   {
+//    b();
     i32 var;
     var = 1;
     i32 var2 = 2;
@@ -68,14 +69,27 @@ std::string inputString = R"STRING_RAW(
 
 int main()
 {
-  std::vector<Token> tokens = tokenise(inputString);
-  AstChunk ast = parse(tokens);
+  MergedAst mergedAst;
+
+  auto add = [&](const std::string path, std::string_view inputString)
+  {
+    AstChunk* ast = mergedAst.create(path);
+    std::vector<Token> tokens = tokenise(inputString);
+    parse(*ast, tokens);
+    mergedAst.link(ast);
+  };
+
+  add("main.w", mainW);
+//  add("other.w", otherW);
 
   SemanticAnalyser semanticAnalyser;
-  semanticAnalyser.run(ast.root);
+  semanticAnalyser.run(mergedAst);
 
-  PlainCGenerator generator;
-  puts(generator.generate(ast.root).c_str());
+  for (const AstChunk* chunk : mergedAst)
+  {
+    PlainCGenerator generator;
+    puts(generator.generate(chunk->root).c_str());
+  }
 
   return 0;
 }

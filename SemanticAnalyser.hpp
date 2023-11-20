@@ -1,9 +1,12 @@
 #pragma once
 #include "Ast.hpp"
 
+class MergedAst;
+
 class SemanticAnalyser
 {
 public:
+  void run(MergedAst& ast);
   void run(Root* root);
 
 private:
@@ -16,8 +19,6 @@ private:
   void run(VariableDeclaration* variableDeclaration);
   void run(ReturnStatement* returnStatement, Func* func);
   void run(IfElseChain* ifElseChain, Func* func);
-
-  bool typeDefined(Type* type);
 
 private:
   std::vector<Scope*> scopeStack;

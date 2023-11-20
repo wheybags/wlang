@@ -1,4 +1,4 @@
 #pragma once
 #include "AstChunk.hpp"
 
-AstChunk parse(const std::vector<Token>& tokens);
+void parse(AstChunk& ast, const std::vector<Token>& tokens);

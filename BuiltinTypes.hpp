@@ -3,14 +3,15 @@
 
 struct BuiltinTypes
 {
-  Type tI32 { .name = "i32", .builtin = true };
-  Type tBool { .name = "bool", .builtin = true };
+  Type tI32 = make("i32");
+  Type tBool = make("bool");
 
   Type* get(std::string_view name);
 
   static BuiltinTypes inst;
 
 private:
+  static Type make(std::string&& name) { return { .name = std::move(name), .builtin = true, }; }
   BuiltinTypes() = default;
 };
 
