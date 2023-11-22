@@ -10,8 +10,11 @@ struct BuiltinTypes
 
   static BuiltinTypes inst;
 
+public:
+  HashMap<Type*> typeMap;
+
 private:
   static Type make(std::string&& name) { return { .name = std::move(name), .builtin = true, }; }
-  BuiltinTypes() = default;
+  BuiltinTypes();
 };
 

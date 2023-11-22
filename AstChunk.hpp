@@ -16,9 +16,6 @@ public:
 
 public:
   Root* root = nullptr;
-  std::unordered_map<std::string, Type*> referencedTypes;
-  std::vector<Type*> createdTypes;
-  std::vector<Type*> importedTypes;
 
 private:
   #define FOR_EACH_TAGGED_UNION_TYPE(XX) \

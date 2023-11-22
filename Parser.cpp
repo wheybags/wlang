@@ -32,7 +32,6 @@ public:
   Expression* resolveIntermediateExpression(IntermediateExpression&& intermediate);
   std::string parseId();
   int32_t parseInt32();
-  Type* getOrCreateType(const std::string& typeName);
 
   #include "ParserRulesDeclarations.inl"
 
@@ -92,14 +91,6 @@ void parse(AstChunk& ast, const std::vector<Token>& tokens)
 {
   Parser parser(ast, tokens.data(), tokens.size());
   ast.root = parser.parseRoot();
-
-  for (auto& pair : ast.referencedTypes)
-  {
-    if (pair.second->typeClass)
-      ast.createdTypes.emplace_back(pair.second);
-    else if (!pair.second->builtin)
-      ast.importedTypes.emplace_back(pair.second);
-  }
 }
 
 Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& intermediate)
@@ -265,26 +256,6 @@ int32_t Parser::parseInt32()
 {
   release_assert(peek().type == Token::Type::Int32);
   return pop().i32Value;
-}
-
-Type* Parser::getOrCreateType(const std::string& typeName)
-{
-  if (Type* builtin = BuiltinTypes::inst.get(typeName))
-    return builtin;
-
-  auto it = ast.referencedTypes.find(typeName);
-
-  if (it == ast.referencedTypes.end())
-  {
-    Type* type = makeNode<Type>();
-    type->name = typeName;
-    ast.referencedTypes.emplace_hint(it, typeName, type);
-    return type;
-  }
-  else
-  {
-    return it->second;
-  }
 }
 
 #include "ParserRules.inl"

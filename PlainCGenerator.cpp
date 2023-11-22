@@ -36,11 +36,9 @@ void PlainCGenerator::generate(const Func* node)
   {
     prototype = strType(node->returnType) + " " + node->name + "(";
 
-    for (const std::string& name : node->argsOrder)
+    for (VariableDeclaration* var : node->args)
     {
-      ScopeItem item = node->argsScope->lookup(name);
-      release_assert(item.isVariable());
-      prototype += generate(item.variable());
+      prototype += generate(var);
       prototype += ", ";
     }
 
@@ -128,7 +126,7 @@ void PlainCGenerator::generate(const Statement* node, OutputString& str)
 
 std::string PlainCGenerator::generate(const VariableDeclaration* variableDeclaration)
 {
-  Class* typeClass = variableDeclaration->type.pointerDepth == 0 ? variableDeclaration->type.type->typeClass : nullptr;
+  Class* typeClass = variableDeclaration->type.pointerDepth == 0 ? variableDeclaration->type.typeResolved->typeClass : nullptr;
 
   std::string str;
   if (typeClass)
@@ -335,10 +333,10 @@ std::string PlainCGenerator::strType(const TypeRef& type)
 {
   std::string str;
 
-  if (type.type->typeClass)
-    str += type.type->name;
+  if (type.typeResolved->typeClass)
+    str += type.typeResolved->name;
   else
-    str += builtinTypeMapping.at(type.type->name);
+    str += builtinTypeMapping.at(type.typeResolved->name);
 
   for (int i = 0; i < type.pointerDepth; i++)
     str += "*";

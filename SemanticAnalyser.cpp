@@ -6,6 +6,9 @@
 void SemanticAnalyser::run(MergedAst& ast)
 {
   for (AstChunk* chunk : ast)
+    resolveTypeRefs(chunk->root);
+
+  for (AstChunk* chunk : ast)
     run(chunk->root);
 }
 
@@ -21,7 +24,7 @@ void SemanticAnalyser::run(Root* root)
 
 void SemanticAnalyser::run(Func* func)
 {
-  release_assert(func->returnType.type->defined());
+  release_assert(func->returnType.typeResolved->defined());
   run(func->funcBody, func);
 }
 
@@ -39,7 +42,7 @@ void SemanticAnalyser::run(Class* classN)
   {
     VariableDeclaration* variableDeclaration = pair.second;
     run(variableDeclaration);
-    release_assert(variableDeclaration->type.type != classN->type || variableDeclaration->type.pointerDepth > 0);
+    release_assert(variableDeclaration->type.typeResolved != classN->type || variableDeclaration->type.pointerDepth > 0);
   }
 }
 
@@ -80,31 +83,30 @@ void SemanticAnalyser::run(Expression* expression)
   {
     case Expression::Val::Tag::Id:
     {
-      ScopeItem item = this->scopeStack.back()->lookup(expression->val.id());
-      release_assert(item);
-      release_assert(item.isVariable());
+      VariableDeclaration* var = this->scopeStack.back()->lookupVar(expression->val.id());
+      release_assert(var);
 
-      if (!expression->source.isAfterEndOf(item.variable()->source))
+      if (!expression->source.isAfterEndOf(var->source))
       {
         message_and_abort_fmt("%s (%d:%d) used before definition (%d:%d)",
                               expression->val.id().c_str(),
                               expression->source.start.y, expression->source.start.x,
-                              item.variable()->source.start.y, item.variable()->source.start.x);
+                              var->source.start.y, var->source.start.x);
       }
 
-      expression->type = item.variable()->type;
+      expression->type = var->type;
       break;
     }
 
     case Expression::Val::Tag::Int32:
     {
-      expression->type = { .type = &BuiltinTypes::inst.tI32 };
+      expression->type = BuiltinTypes::inst.tI32.reference();
       break;
     }
 
     case Expression::Val::Tag::Bool:
     {
-      expression->type = { .type = &BuiltinTypes::inst.tBool };
+      expression->type = BuiltinTypes::inst.tBool.reference();
       break;
     }
 
@@ -121,7 +123,7 @@ void SemanticAnalyser::run(Expression* expression)
           run(op->left);
           run(op->right);
           release_assert(op->left->type == op->right->type);
-          expression->type = { .type = &BuiltinTypes::inst.tBool };
+          expression->type = BuiltinTypes::inst.tBool.reference();
           break;
         }
 
@@ -129,17 +131,17 @@ void SemanticAnalyser::run(Expression* expression)
         {
           run(op->left);
           release_assert(op->left->type.pointerDepth > 0 ||
-                         op->left->type.type == &BuiltinTypes::inst.tBool ||
-                         op->left->type.type == &BuiltinTypes::inst.tI32);
-          expression->type = { .type = &BuiltinTypes::inst.tBool };
+                         op->left->type.typeResolved == &BuiltinTypes::inst.tBool ||
+                         op->left->type.typeResolved == &BuiltinTypes::inst.tI32);
+          expression->type = BuiltinTypes::inst.tBool.reference();
           break;
         }
 
         case Op::Type::UnaryMinus:
         {
           run(op->left);
-          release_assert(op->left->type.type == &BuiltinTypes::inst.tI32);
-          expression->type = { .type = &BuiltinTypes::inst.tI32 };
+          release_assert(op->left->type.typeResolved == &BuiltinTypes::inst.tI32);
+          expression->type = BuiltinTypes::inst.tI32.reference();
           break;
         }
 
@@ -147,19 +149,14 @@ void SemanticAnalyser::run(Expression* expression)
         {
           release_assert(op->left->val.isId());
 
-          ScopeItem item = this->scopeStack.back()->lookup(op->left->val.id());
-          release_assert(item);
-          release_assert(item.isFunction());
+          Func* function = this->scopeStack.back()->lookupFunc(op->left->val.id());
+          release_assert(function);
 
-          Func* function = item.function();
-
-          release_assert(op->callArgs.size() == function->argsOrder.size());
+          release_assert(op->callArgs.size() == function->args.size());
           for (int32_t i = 0; i < int32_t(op->callArgs.size()); i++)
           {
             run(op->callArgs[i]);
-
-            const std::string& argName = function->argsOrder[i];
-            release_assert(op->callArgs[i]->type == function->argsScope->lookup(argName).variable()->type);
+            release_assert(op->callArgs[i]->type == function->args[i]->type);
           }
 
           expression->type = function->returnType;
@@ -172,10 +169,10 @@ void SemanticAnalyser::run(Expression* expression)
           release_assert(op->right->val.isId());
 
           release_assert(op->left->type.pointerDepth <= 1);
-          release_assert(op->left->type.type->typeClass);
+          release_assert(op->left->type.typeResolved->typeClass);
 
-          auto it = op->left->type.type->typeClass->memberVariables.find(op->right->val.id());
-          release_assert(it != op->left->type.type->typeClass->memberVariables.end());
+          auto it = op->left->type.typeResolved->typeClass->memberVariables.find(op->right->val.id());
+          release_assert(it != op->left->type.typeResolved->typeClass->memberVariables.end());
 
           expression->type = it->second->type;
           break;
@@ -188,9 +185,9 @@ void SemanticAnalyser::run(Expression* expression)
         {
           run(op->left);
           run(op->right);
-          release_assert(op->left->type == TypeRef{ .type = &BuiltinTypes::inst.tI32 });
-          release_assert(op->right->type == TypeRef{ .type = &BuiltinTypes::inst.tI32 });
-          expression->type = { .type = &BuiltinTypes::inst.tI32 };
+          release_assert(op->left->type == BuiltinTypes::inst.tI32.reference());
+          release_assert(op->right->type == BuiltinTypes::inst.tI32.reference());
+          expression->type = BuiltinTypes::inst.tI32.reference();
           break;
         }
         case Op::Type::ENUM_END:
@@ -203,13 +200,13 @@ void SemanticAnalyser::run(Expression* expression)
       message_and_abort("empty expression!");
   }
 
-  release_assert(expression->type.type);
+  release_assert(expression->type.typeResolved);
 }
 
 void SemanticAnalyser::run(VariableDeclaration* variableDeclaration)
 {
-  release_assert(variableDeclaration->type.type);
-  release_assert(variableDeclaration->type.type->defined());
+  release_assert(variableDeclaration->type.typeResolved);
+  release_assert(variableDeclaration->type.typeResolved->defined());
 
   if (variableDeclaration->initialiser)
   {
@@ -233,7 +230,7 @@ void SemanticAnalyser::run(IfElseChain* ifElseChain, Func* func)
     if (item->condition)
     {
       run(item->condition);
-      release_assert(item->condition->type == TypeRef{ .type = &BuiltinTypes::inst.tBool });
+      release_assert(item->condition->type == BuiltinTypes::inst.tBool.reference());
     }
     else
     {
@@ -242,5 +239,79 @@ void SemanticAnalyser::run(IfElseChain* ifElseChain, Func* func)
 
     run(item->block, func);
   }
+}
+
+void SemanticAnalyser::resolveTypeRefs(Root* root)
+{
+  this->scopeStack.emplace_back(root->funcList->scope);
+  for (Func* func : root->funcList->functions)
+    resolveTypeRefs(func);
+  for (Class* classN : root->funcList->classes)
+    resolveTypeRefs(classN);
+  this->scopeStack.resize(this->scopeStack.size()-1);
+}
+
+void SemanticAnalyser::resolveTypeRefs(Class* classN)
+{
+  for (auto& pair : classN->memberVariables)
+  {
+    VariableDeclaration* variableDeclaration = pair.second;
+    resolveTypeRefs(variableDeclaration);
+  }
+}
+
+void SemanticAnalyser::resolveTypeRefs(Func* func)
+{
+  resolveTypeRefs(func->returnType);
+  for (VariableDeclaration* arg : func->args)
+    resolveTypeRefs(arg);
+  resolveTypeRefs(func->funcBody);
+}
+
+void SemanticAnalyser::resolveTypeRefs(Block* block)
+{
+  this->scopeStack.emplace_back(block->scope);
+  for (Statement* statement : block->statements)
+    resolveTypeRefs(statement);
+  this->scopeStack.resize(this->scopeStack.size()-1);
+}
+
+void SemanticAnalyser::resolveTypeRefs(Statement* statement)
+{
+  switch (statement->tag())
+  {
+    case Statement::Tag::IfElseChain:
+      resolveTypeRefs(statement->ifElseChain());
+      break;
+    case Statement::Tag::Variable:
+      resolveTypeRefs(statement->variable());
+      break;
+    case Statement::Tag::Assignment:
+    case Statement::Tag::Expression:
+    case Statement::Tag::Return:
+      break;
+    case Statement::Tag::None:
+      message_and_abort("bad statement");
+  }
+}
+
+void SemanticAnalyser::resolveTypeRefs(IfElseChain* ifElseChain)
+{
+  for (int32_t i = 0; i < int32_t(ifElseChain->items.size()); i++)
+  {
+    IfElseChainItem* item = ifElseChain->items[i];
+    resolveTypeRefs(item->block);
+  }
+}
+
+void SemanticAnalyser::resolveTypeRefs(VariableDeclaration* variableDeclaration)
+{
+  resolveTypeRefs(variableDeclaration->type);
+}
+
+void SemanticAnalyser::resolveTypeRefs(TypeRef& typeRef)
+{
+  typeRef.typeResolved = scopeStack.back()->lookupType(typeRef.typeName);
+  release_assert(typeRef.typeResolved);
 }
 

@@ -28,18 +28,19 @@ const char* wlangGrammarStr = R"STR(
     Func
     {{
       funcList->functions.emplace_back(v0);
-      funcList->scope->variables.insert_or_assign(v0->name, v0);
+      funcList->scope->functions.insert_or_assign(v0->name, Scope::Item<Func*>{.item = v0, .chunk = &ast});
     }}
     FuncList'<{funcList}>
   |
-    "class" BaseType
+    "class" $Id
     {{
+      Type* type = makeNode<Type>();
       Class* newClass = makeNode<Class>();
-      // TODO: assert that class name is not a builtin type
-      release_assert(!v0->typeClass);
-      v0->typeClass = newClass;
-      newClass->type = v0;
+      newClass->type = type;
+      type->typeClass = newClass;
+      type->name = v0;
       funcList->classes.emplace_back(newClass);
+      funcList->scope->types.insert_or_assign(type->name, Scope::Item<Type*>{.item = type, .chunk = &ast});
     }}
     "{" ClassMemberList<{newClass}> "}"
     FuncList'<{funcList}>
@@ -218,7 +219,7 @@ const char* wlangGrammarStr = R"STR(
     // declaration
     {{
       VariableDeclaration* variableDeclaration = makeNode<VariableDeclaration>();
-      variableDeclaration->type = TypeRef { .type = getOrCreateType(id) };
+      variableDeclaration->type = TypeRef { .typeName = id };
     }}
     Type'<{variableDeclaration->type}>
     $Id TheRestOfADeclaration
@@ -229,7 +230,7 @@ const char* wlangGrammarStr = R"STR(
       variableDeclaration->initialiser = v1;
       variableDeclaration->source = SourceRange(idSource.start, declarationEnd.end);
 
-      getScope()->variables.insert_or_assign(variableDeclaration->name, variableDeclaration);
+      getScope()->variables.insert_or_assign(variableDeclaration->name, Scope::Item<VariableDeclaration*>{.item = variableDeclaration, .chunk = &ast});
       *statement = variableDeclaration;
     }}
   |
@@ -395,8 +396,8 @@ const char* wlangGrammarStr = R"STR(
     Nil;
 
   Type <{TypeRef}> =
-    BaseType
-    {{ TypeRef retval{ .type = v0 }; }}
+    $Id
+    {{ TypeRef retval{ .typeName = v0 }; }}
     Type'<{retval}>
     {{ return retval; }}
   ;
@@ -406,14 +407,12 @@ const char* wlangGrammarStr = R"STR(
   |
     Nil;
 
-  BaseType <{Type*}> =
-    $Id {{ return getOrCreateType(v0); }};
 
   ArgList <{void}> <{Func* func}> =
     Arg
     {{
-      func->argsOrder.emplace_back(v0->name);
-      func->argsScope->variables.insert_or_assign(v0->name, v0);
+      func->args.emplace_back(v0);
+      func->argsScope->variables.insert_or_assign(v0->name, Scope::Item<VariableDeclaration*>{.item = v0, .chunk = &ast});
     }}
     ArgList'<{func}>
   |

@@ -6,6 +6,7 @@
 #include <unordered_map>
 #include "Assert.hpp"
 #include "Tokeniser.hpp"
+#include "HashMap.hpp"
 
 struct Root;
 struct FuncList;
@@ -19,31 +20,27 @@ struct Type;
 struct Op;
 struct IfElseChain;
 struct IfElseChainItem;
-
-
 struct Scope;
+class AstChunk;
+
+struct TypeRef
+{
+  std::string typeName;
+  Type* typeResolved = nullptr;
+  int32_t pointerDepth = 0;
+
+  bool operator==(TypeRef& other);
+  bool operator!=(TypeRef& other);
+};
 
 struct Type
 {
   std::string name;
   bool builtin = false;
-
-  // user defined types will have a class, builtins have only name
-  Class* typeClass = nullptr;
+  Class* typeClass = nullptr; // user defined types will have a class, builtins have only name
 
   bool defined() const { return builtin || typeClass; }
-};
-
-struct TypeRef
-{
-  Type* type = nullptr;
-  int32_t pointerDepth = 0;
-
-  bool operator==(const TypeRef& other) const
-  {
-    return pointerDepth == other.pointerDepth && (type == other.type || (type && other.type && type->typeClass && type->typeClass == other.type->typeClass));
-  }
-  bool operator!=(const TypeRef& other) const { return !(*this == other); }
+  TypeRef reference() { return {.typeName = name, .typeResolved = this}; }
 };
 
 class Expression
@@ -89,7 +86,7 @@ struct Func
 {
   TypeRef returnType;
   std::string name;
-  std::vector<std::string> argsOrder;
+  std::vector<VariableDeclaration*> args;
   Scope* argsScope = nullptr;
   Block* funcBody = nullptr;
 };
@@ -164,19 +161,27 @@ struct IfElseChainItem
   Block* block = nullptr;
 };
 
-
-#define FOR_EACH_TAGGED_UNION_TYPE(XX) \
-  XX(function, Function, Func*) \
-  XX(variable, Variable, VariableDeclaration*)
-#define CLASS_NAME ScopeItem
-#include "CreateTaggedUnion.hpp"
-
 struct Scope
 {
   Scope* parent = nullptr;
   Scope* parent2 = nullptr; // function blocks need two parents - global scope + the function's arguments
 
-  std::unordered_map<std::string, ScopeItem> variables;
+  template<typename T>
+  struct Item
+  {
+    T item;
+    AstChunk* chunk;
+  };
 
-  ScopeItem lookup(const std::string& name);
+  HashMap<Item<Func*>> functions;
+  HashMap<Item<VariableDeclaration*>> variables;
+  HashMap<Item<Type*>> types;
+
+  Func* lookupFunc(std::string_view name) { return lookup<Func>(name); }
+  VariableDeclaration* lookupVar(std::string_view name) { return lookup<VariableDeclaration>(name); }
+  Type* lookupType(std::string_view name) { return lookup<Type>(name); }
+
+private:
+  template<typename T>
+  T* lookup(std::string_view name);
 };

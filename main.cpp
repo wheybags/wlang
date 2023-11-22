@@ -54,7 +54,7 @@ std::string mainW = R"STRING_RAW(
 
   i32 main()
   {
-//    b();
+    b();
     i32 var;
     var = 1;
     i32 var2 = 2;
@@ -80,7 +80,7 @@ int main()
   };
 
   add("main.w", mainW);
-//  add("other.w", otherW);
+  add("other.w", otherW);
 
   SemanticAnalyser semanticAnalyser;
   semanticAnalyser.run(mergedAst);
