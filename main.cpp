@@ -13,28 +13,37 @@ std::string otherW = R"STRING_RAW(
 
 
 std::string mainW = R"STRING_RAW(
-  i32 ff(Vec2i* vec)
-  {
-//    Vec2f uuu;
-    false;
-    bool a = true;
-    vec.x = 1;
-    Vec2i vec2;
-    func(1,2);
-    return vec2.x;
-  }
+//  i32 ff(Vec2i* vec)
+//  {
+////    Vec2f uuu;
+//    false;
+//    bool a = true;
+//    vec.x = 1;
+//    Vec2i vec2;
+//    func(1,2);
+//    return vec2.x;
+//  }
 
   class Vec2i
   {
     i32 x = 0 + 23;
     i32 y = 0;
+    blah b;
   }
+
+  class blah
+  {
+    i32 iii;
+    blah2* b2;
+  }
+
+  class blah2 { i32 jjj; }
 
   // blah blah
   bool func(i32 x, i32 y)
   {
     Vec2i pos;
-    i32 val = x + 2 * y / 3 + pos.x; // undefined = poop()
+    i32 val = x + 2 * y / 3;// + pos.x; // undefined = poop()
 
     if (1 == 1)
     {
@@ -67,11 +76,12 @@ std::string mainW = R"STRING_RAW(
   }
 )STRING_RAW";
 
+
 int main()
 {
   MergedAst mergedAst;
 
-  auto add = [&](const std::string path, std::string_view inputString)
+  auto add = [&](std::string_view path, std::string_view inputString)
   {
     AstChunk* ast = mergedAst.create(path);
     std::vector<Token> tokens = tokenise(inputString);
@@ -87,8 +97,13 @@ int main()
 
   for (const AstChunk* chunk : mergedAst)
   {
-    PlainCGenerator generator;
-    puts(generator.generate(chunk->root).c_str());
+    for (const Func* function : chunk->root->funcList->functions)
+    {
+      PlainCGenerator generator;
+      generator.generate(function);
+      puts(generator.output().c_str());
+      puts("=================");
+    }
   }
 
   return 0;

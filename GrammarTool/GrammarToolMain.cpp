@@ -36,6 +36,8 @@ const char* wlangGrammarStr = R"STR(
     {{
       Type* type = makeNode<Type>();
       Class* newClass = makeNode<Class>();
+      newClass->memberScope = makeNode<Scope>();
+      newClass->memberScope->parent = getScope();
       newClass->type = type;
       type->typeClass = newClass;
       type->name = v0;
@@ -53,8 +55,8 @@ const char* wlangGrammarStr = R"STR(
       variableDeclaration->type = v0;
       variableDeclaration->name = v1;
       variableDeclaration->initialiser = v2;
-      newClass->memberVariableOrder.emplace_back(variableDeclaration->name);
-      newClass->memberVariables.insert_or_assign(variableDeclaration->name, variableDeclaration);
+      newClass->memberVariables.push_back(variableDeclaration);
+      newClass->memberScope->variables.emplace(variableDeclaration->name, Scope::Item<VariableDeclaration*>{.item = variableDeclaration, .chunk = &ast});
     }}
     ";" ClassMemberList<{newClass}>
   |
@@ -219,7 +221,7 @@ const char* wlangGrammarStr = R"STR(
     // declaration
     {{
       VariableDeclaration* variableDeclaration = makeNode<VariableDeclaration>();
-      variableDeclaration->type = TypeRef { .typeName = id };
+      variableDeclaration->type = TypeRef { .id = id };
     }}
     Type'<{variableDeclaration->type}>
     $Id TheRestOfADeclaration
@@ -237,7 +239,7 @@ const char* wlangGrammarStr = R"STR(
     // assign, or standalone expression that starts with id
     {{
       Expression* partial = makeNode<Expression>();
-      partial->val = id;
+      partial->val = ScopeId(id);
       partial->source = idSource;
 
       IntermediateExpression intermediate;
@@ -254,7 +256,7 @@ const char* wlangGrammarStr = R"STR(
     Nil
     {{
       Expression* expression = makeNode<Expression>();
-      expression->val = id;
+      expression->val = ScopeId(id);
       *statement = expression;
     }}
   ;
@@ -293,7 +295,7 @@ const char* wlangGrammarStr = R"STR(
     $Id
     {{
       Expression* expression = makeNode<Expression>();
-      expression->val = v0;
+      expression->val = ScopeId(v0);
       expression->source = source;
       result.emplace_back(expression, expression->source);
     }} Expression'<{result}>
@@ -397,7 +399,7 @@ const char* wlangGrammarStr = R"STR(
 
   Type <{TypeRef}> =
     $Id
-    {{ TypeRef retval{ .typeName = v0 }; }}
+    {{ TypeRef retval{ .id = v0 }; }}
     Type'<{retval}>
     {{ return retval; }}
   ;

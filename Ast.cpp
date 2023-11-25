@@ -1,7 +1,7 @@
 #include "Ast.hpp"
 
 template<typename T>
-T* Scope::lookup(std::string_view name)
+T* Scope::lookup(ScopeId& name)
 {
   HashMap<Item<T*>>* map = nullptr;
   if constexpr (std::is_same<T, Func>::value)
@@ -11,9 +11,12 @@ T* Scope::lookup(std::string_view name)
   if constexpr (std::is_same<T, Type>::value)
     map = &this->types;
 
-  auto it = map->find(name);
+  auto it = map->find(name.str);
   if (it != map->end())
+  {
+    name.resolved = it->second.item;
     return it->second.item;
+  }
 
   if (this->parent2)
   {
@@ -32,17 +35,46 @@ T* Scope::lookup(std::string_view name)
   return nullptr;
 }
 
-template Func* Scope::lookup<Func>(std::string_view name);
-template VariableDeclaration* Scope::lookup<VariableDeclaration>(std::string_view name);
-template Type* Scope::lookup<Type>(std::string_view name);
+template Func* Scope::lookup<Func>(ScopeId& name);
+template VariableDeclaration* Scope::lookup<VariableDeclaration>(ScopeId& name);
+template Type* Scope::lookup<Type>(ScopeId& name);
 
 
 bool TypeRef::operator==(TypeRef& other)
 {
-  return pointerDepth == other.pointerDepth && (typeResolved == other.typeResolved || (typeResolved && other.typeResolved && typeResolved->typeClass && typeResolved->typeClass == other.typeResolved->typeClass));
+  if (pointerDepth != other.pointerDepth)
+    return false;
+
+  if (id.resolved == other.id.resolved)
+    return true;
+
+  if (id.resolved &&
+      other.id.resolved &&
+      id.resolved.type()->typeClass &&
+      id.resolved.type()->typeClass == other.id.resolved.type()->typeClass)
+  {
+    return true;
+  }
+
+  return false;
 }
 
 bool TypeRef::operator!=(TypeRef& other)
 {
   return !(*this == other);
+}
+
+void ScopeId::resolveFunction(Scope& scope)
+{
+  scope.lookup<Func>(*this);
+}
+
+void ScopeId::resolveVariableDeclaration(Scope& scope)
+{
+  scope.lookup<VariableDeclaration>(*this);
+}
+
+void ScopeId::resolveType(Scope& scope)
+{
+  scope.lookup<Type>(*this);
 }

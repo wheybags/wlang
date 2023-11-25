@@ -23,10 +23,34 @@ struct IfElseChainItem;
 struct Scope;
 class AstChunk;
 
+
+struct ScopeId
+{
+  #define FOR_EACH_TAGGED_UNION_TYPE(XX) \
+    XX(function, Function, Func*) \
+    XX(variableDeclaration, VariableDeclaration, VariableDeclaration*) \
+    XX(type, Type, Type*)
+  #define CLASS_NAME Resolved
+  #include "CreateTaggedUnion.hpp"
+
+  ScopeId() {}
+  ScopeId(std::string str): str(std::move(str)) {}
+  ScopeId(std::string str, Resolved resolved) : str(std::move(str)), resolved(std::move(resolved)) {}
+  ScopeId& operator=(std::string str) { this->str = std::move(str); return *this; }
+
+  void resolveFunction(Scope& scope);
+  void resolveVariableDeclaration(Scope& scope);
+  void resolveType(Scope& scope);
+
+public:
+  std::string str;
+  Resolved resolved;
+};
+
+
 struct TypeRef
 {
-  std::string typeName;
-  Type* typeResolved = nullptr;
+  ScopeId id;
   int32_t pointerDepth = 0;
 
   bool operator==(TypeRef& other);
@@ -39,15 +63,14 @@ struct Type
   bool builtin = false;
   Class* typeClass = nullptr; // user defined types will have a class, builtins have only name
 
-  bool defined() const { return builtin || typeClass; }
-  TypeRef reference() { return {.typeName = name, .typeResolved = this}; }
+  TypeRef reference() { return { .id = ScopeId(name, this) }; }
 };
 
 class Expression
 {
 public:
   #define FOR_EACH_TAGGED_UNION_TYPE(XX) \
-    XX(id, Id, std::string) \
+    XX(id, Id, ScopeId) \
     XX(i32, Int32, int32_t) \
     XX(boolean, Bool, bool ) \
     XX(op, Op, Op*)
@@ -94,8 +117,8 @@ struct Func
 struct Class
 {
   Type* type = nullptr;
-  std::vector<std::string> memberVariableOrder;
-  std::unordered_map<std::string, VariableDeclaration*> memberVariables;
+  std::vector<VariableDeclaration*> memberVariables;
+  Scope* memberScope = nullptr;
 };
 
 struct Block
@@ -142,12 +165,39 @@ struct Op
     ENUM_END
   };
 
-  Expression* left = nullptr;
-  Expression* right = nullptr;
+  struct Binary
+  {
+    Expression* left = nullptr;
+    Expression* right = nullptr;
+  };
 
-  std::vector<Expression*> callArgs;
+  struct Unary
+  {
+    Expression* expression = nullptr;
+  };
+
+  struct Call
+  {
+    Expression* callable = nullptr;
+    std::vector<Expression*> callArgs;
+  };
+
+  struct MemberAccess
+  {
+    Expression* expression = nullptr;
+    ScopeId member;
+  };
+
+  #define FOR_EACH_TAGGED_UNION_TYPE(XX) \
+    XX(binary, Binary, Binary) \
+    XX(unary, Unary, Unary) \
+    XX(call, Call, Call) \
+    XX(memberAccess, MemberAccess, MemberAccess)
+  #define CLASS_NAME Args
+  #include "CreateTaggedUnion.hpp"
 
   Type type = Type::ENUM_END;
+  Args args;
 };
 
 struct IfElseChain
@@ -177,11 +227,8 @@ struct Scope
   HashMap<Item<VariableDeclaration*>> variables;
   HashMap<Item<Type*>> types;
 
-  Func* lookupFunc(std::string_view name) { return lookup<Func>(name); }
-  VariableDeclaration* lookupVar(std::string_view name) { return lookup<VariableDeclaration>(name); }
-  Type* lookupType(std::string_view name) { return lookup<Type>(name); }
-
 private:
   template<typename T>
-  T* lookup(std::string_view name);
+  T* lookup(ScopeId& name);
+  friend struct ScopeId;
 };

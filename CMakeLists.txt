@@ -18,6 +18,7 @@ elseif (MSVC)
     add_compile_options(
         /W4
         /w14062 # warn on unhandled enum entries in switch
+        /wd4458 # don't warn on shadowing member names
     )
     add_definitions(-D_CRT_SECURE_NO_WARNINGS -DNOMINMAX)
 endif()

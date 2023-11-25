@@ -12,30 +12,22 @@
 // To create, just assign or construct from an int or string.
 
 
-#define GEN_ENUM_MEMBERS(name, nameCap, type) nameCap,
 
-#ifndef GEN_CONSTRUCTORS
-  #define GEN_CONSTRUCTORS(name, nameCap, type) CLASS_NAME(type name) : _tag(Tag::nameCap)  { new (&vals. _ ## name) type(std::move(name)); }
-#endif
 
-#define GEN_COPY_CONSTRUCTOR(name, nameCap, type) case Tag::nameCap: new (&vals. _ ## name) type(std::move(other.vals. _ ## name)); _tag = Tag::nameCap; break;
 
-#define GEN_DESTRUCTORS(name, nameCap, type) case Tag::nameCap: destructIfNeeded(vals. _ ## name); break;
 
-#define GEN_IS_XX(name, nameCap, type) bool is ## nameCap() const { return _tag == Tag::nameCap; }
-#define GEN_GETTERS(name, nameCap, type) type& name() { release_assert(is ## nameCap()); return vals. _ ## name; } \
-                                         type const & name() const { release_assert(is ## nameCap()); return vals. _ ## name; }
 
-#define GEN_UNION_MEMBERS(name, nameCap, type) type _ ## name;
 
-#define GEN_TEMPLATE_GETTER(name, nameCap, type) if constexpr (std::is_same<T, type>::value) return name();
+
 
 class CLASS_NAME
 {
 public:
   enum class Tag
   {
-    FOR_EACH_TAGGED_UNION_TYPE(GEN_ENUM_MEMBERS)
+    #define GEN_TU_PART(name, nameCap, type) nameCap,
+    FOR_EACH_TAGGED_UNION_TYPE(GEN_TU_PART)
+    #undef GEN_TU_PART
     None,
   };
   CLASS_NAME() {}
@@ -44,7 +36,9 @@ public:
   {
     switch(other._tag)
     {
-      FOR_EACH_TAGGED_UNION_TYPE(GEN_COPY_CONSTRUCTOR)
+      #define GEN_TU_PART(name, nameCap, type) case Tag::nameCap: new (&vals. _ ## name) type(std::move(other.vals. _ ## name)); _tag = Tag::nameCap; break;
+      FOR_EACH_TAGGED_UNION_TYPE(GEN_TU_PART)
+      #undef GEN_TU_PART
       case Tag::None: break;
     }
   }
@@ -55,15 +49,21 @@ public:
       return *this;
 
     this->~CLASS_NAME();
+
     switch(other._tag)
     {
-      FOR_EACH_TAGGED_UNION_TYPE(GEN_COPY_CONSTRUCTOR)
+      #define GEN_TU_PART(name, nameCap, type) case Tag::nameCap: new (&vals. _ ## name) type(std::move(other.vals. _ ## name)); _tag = Tag::nameCap; break;
+      FOR_EACH_TAGGED_UNION_TYPE(GEN_TU_PART)
+      #undef GEN_TU_PART
       case Tag::None: break;
     }
+
     return *this;
   }
 
-  FOR_EACH_TAGGED_UNION_TYPE(GEN_CONSTRUCTORS)
+  #define GEN_TU_PART(name, nameCap, type) CLASS_NAME(type name) : _tag(Tag::nameCap)  { new (&vals. _ ## name) type(std::move(name)); }
+  FOR_EACH_TAGGED_UNION_TYPE(GEN_TU_PART)
+  #undef GEN_TU_PART
 
   template <typename T>
   typename std::enable_if<std::is_destructible<T>::value>::type destructIfNeeded(T& obj)
@@ -78,46 +78,64 @@ public:
   {
     switch(_tag)
     {
-      FOR_EACH_TAGGED_UNION_TYPE(GEN_DESTRUCTORS)
+      #define GEN_TU_PART(name, nameCap, type) case Tag::nameCap: destructIfNeeded(vals. _ ## name); break;
+      FOR_EACH_TAGGED_UNION_TYPE(GEN_TU_PART)
+      #undef GEN_TU_PART
       case Tag::None: break;
     }
   }
   Tag tag() const { return _tag; }
   operator bool() const { return _tag != Tag::None; }
 
-  FOR_EACH_TAGGED_UNION_TYPE(GEN_IS_XX)
-  FOR_EACH_TAGGED_UNION_TYPE(GEN_GETTERS)
+  #define GEN_TU_PART(name, nameCap, type) bool is ## nameCap() const { return _tag == Tag::nameCap; }
+  FOR_EACH_TAGGED_UNION_TYPE(GEN_TU_PART)
+  #undef GEN_TU_PART
+
+  #define GEN_TU_PART(name, nameCap, type) type& name() { release_assert(is ## nameCap()); return vals. _ ## name; } \
+                                           type const & name() const { release_assert(is ## nameCap()); return vals. _ ## name; }
+  FOR_EACH_TAGGED_UNION_TYPE(GEN_TU_PART)
+  #undef GEN_TU_PART
 
   template<typename T>
-  T& get()
+  bool operator==(const T & other) const
   {
-    FOR_EACH_TAGGED_UNION_TYPE(GEN_TEMPLATE_GETTER)
+    static_assert(std::is_same<T, CLASS_NAME>::value);
+
+    if (_tag != other._tag)
+      return false;
+
+    switch(_tag)
+    {
+      #define GEN_TU_PART(name, nameCap, type) case Tag::nameCap: return vals. _ ## name == other.vals. _ ## name; break;
+      FOR_EACH_TAGGED_UNION_TYPE(GEN_TU_PART)
+      #undef GEN_TU_PART
+      case Tag::None: break;
+    }
+
+    message_and_abort("unreachable");
   }
 
   template<typename T>
-  const T& get() const
-  {
-    FOR_EACH_TAGGED_UNION_TYPE(GEN_TEMPLATE_GETTER)
-  }
+  bool operator!=(const CLASS_NAME & other) const { return !(*this == other); }
+
+  #define GEN_TU_PART(name, nameCap, type) if constexpr (std::is_same<T, type>::value) return name();
+  template<typename T> T& get() { FOR_EACH_TAGGED_UNION_TYPE(GEN_TU_PART)  }
+  template<typename T> const T& get() const { FOR_EACH_TAGGED_UNION_TYPE(GEN_TU_PART) }
+  #undef GEN_TU_PART
 
 private:
   Tag _tag = Tag::None;
 
   union TaggedUnionVals
   {
-    FOR_EACH_TAGGED_UNION_TYPE(GEN_UNION_MEMBERS)
+    #define GEN_TU_PART(name, nameCap, type) type _ ## name;
+    FOR_EACH_TAGGED_UNION_TYPE(GEN_TU_PART)
+    #undef GEN_TU_PART
     TaggedUnionVals() {}
     ~TaggedUnionVals() {}
   } vals;
 };
 
 
-#undef GEN_ENUM_MEMBERS
-#undef GEN_CONSTRUCTORS
-#undef GEN_COPY_CONSTRUCTOR
-#undef GEN_DESTRUCTORS
-#undef GEN_IS_XX
-#undef GEN_GETTERS
-#undef GEN_UNION_MEMBERS
-#undef CLASS_NAME
 #undef FOR_EACH_TAGGED_UNION_TYPE
+#undef CLASS_NAME

@@ -7,23 +7,30 @@ class PlainCGenerator
 public:
   PlainCGenerator();
 
-  std::string generate(const Root* root);
+  std::string output();
+
+  void generate(const Root* root);
+  void generate(const Func* node);
 
 private:
+  void referenceType(const TypeRef& typeRef);
+  void referenceFunction(const Func* function);
+  std::string getPrototype(const Func* node);
+  void generateClassDeclaration(const Class*, OutputString& str);
+
   void generate(const FuncList* node);
-  void generate(const Func* node);
   void generate(const Block* block, OutputString& str);
   void generate(const Statement* node, OutputString& str);
   std::string generate(const Expression* node);
   std::string generate(const VariableDeclaration* variableDeclaration);
-  void generate(const Class* node);
+//  void generate(const Class* node);
   std::string strType(const TypeRef& type);
 
 private:
-  OutputString headers;
-  OutputString functionPrototypes;
+  std::unordered_set<const Type*> usedTypesByRef;
+  std::unordered_set<const Type*> usedTypesByValue;
+  std::unordered_set<const Func*> usedFunctions;
   OutputString functionBodies;
-  OutputString classes;
 };
 
 

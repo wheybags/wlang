@@ -8,7 +8,7 @@ MergedAst::MergedAst()
     this->linkScope.types.insert_or_assign(pair.first, Scope::Item<Type*>{.item = pair.second, .chunk = nullptr});
 }
 
-AstChunk* MergedAst::create(const std::string& path)
+AstChunk* MergedAst::create(std::string_view path)
 {
   auto it = this->chunks.find(path);
   release_assert(it == this->chunks.end());
@@ -17,21 +17,26 @@ AstChunk* MergedAst::create(const std::string& path)
 
 void MergedAst::link(AstChunk* chunk)
 {
-  for (const auto& item : chunk->root->funcList->scope->types)
-    this->linkScope.types.insert_or_assign(item.first, item.second);
+  Scope* chunkScope = chunk->root->funcList->scope;
+  release_assert(!chunkScope->parent);
 
-  for (const auto& item : chunk->root->funcList->scope->variables)
-    this->linkScope.variables.insert_or_assign(item.first, item.second);
+  for (auto& item : chunkScope->types)
+    this->linkScope.types.insert(item);
+  chunkScope->types.clear();
 
-  for (const auto& item : chunk->root->funcList->scope->functions)
-    this->linkScope.functions.insert_or_assign(item.first, item.second);
+  for (const auto& item : chunkScope->variables)
+    this->linkScope.variables.insert(item);
+  chunkScope->variables.clear();
 
-  release_assert(!chunk->root->funcList->scope->parent);
-  chunk->root->funcList->scope->parent = &this->linkScope;
+  for (const auto& item : chunkScope->functions)
+    this->linkScope.functions.insert(item);
+  chunkScope->functions.clear();
+
+  chunkScope->parent = &this->linkScope;
 }
 
 template<typename T>
-static void remove(AstChunk* chunk, HashMap<Scope::Item<T*>> map)
+static void removeChunkPart(AstChunk* chunk, HashMap<Scope::Item<T*>> map)
 {
   for (auto it = map.begin(); it != map.end();)
   {
@@ -42,12 +47,18 @@ static void remove(AstChunk* chunk, HashMap<Scope::Item<T*>> map)
   }
 }
 
-void MergedAst::unlink(AstChunk* chunk)
+void MergedAst::tryRemoveChunk(std::string_view path)
 {
-  release_assert(chunk->root->funcList->scope->parent == &this->linkScope);
-  chunk->root->funcList->scope->parent = nullptr;
-  remove(chunk, this->linkScope.types);
-  remove(chunk, this->linkScope.variables);
-  remove(chunk, this->linkScope.functions);
+  auto it = this->chunks.find(path);
+  if (it == this->chunks.end())
+    return;
+
+  AstChunk* chunk = it->second.get();
+
+  removeChunkPart(chunk, this->linkScope.types);
+  removeChunkPart(chunk, this->linkScope.variables);
+  removeChunkPart(chunk, this->linkScope.functions);
+
+  this->chunks.erase(it);
 }
 

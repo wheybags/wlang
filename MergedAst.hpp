@@ -11,9 +11,9 @@ public:
   MergedAst& operator=(const MergedAst&) = delete;
   MergedAst& operator=(MergedAst&&) = delete;
 
-  AstChunk* create(const std::string& path);
+  AstChunk* create(std::string_view path);
   void link(AstChunk* chunk);
-  void unlink(AstChunk* chunk);
+  void tryRemoveChunk(std::string_view path);
 
   struct iterator
   {
@@ -32,6 +32,6 @@ public:
   iterator end() { iterator it; it.realIt = chunks.end(); return it; }
 
 private:
-  std::unordered_map<std::string, std::unique_ptr<AstChunk>> chunks;
+  HashMap<std::unique_ptr<AstChunk>> chunks;
   Scope linkScope;
 };

@@ -20,14 +20,17 @@ private:
   void run(ReturnStatement* returnStatement, Func* func);
   void run(IfElseChain* ifElseChain, Func* func);
 
-  void resolveTypeRefs(Root* root);
-  void resolveTypeRefs(Class* classN);
-  void resolveTypeRefs(Func* func);
-  void resolveTypeRefs(Block* block);
-  void resolveTypeRefs(Statement* statement);
-  void resolveTypeRefs(IfElseChain* ifElseChain);
-  void resolveTypeRefs(VariableDeclaration* variableDeclaration);
-  void resolveTypeRefs(TypeRef& typeRef);
+  void resolveScopeIds(Root* root);
+  void resolveScopeIds(Class* classN);
+  void resolveScopeIds(Func* func);
+  void resolveScopeIds(Block* block);
+  void resolveScopeIds(Statement* statement);
+  void resolveScopeIds(Expression* expression);
+  void resolveScopeIds(Assignment* assignment);
+  void resolveScopeIds(IfElseChain* ifElseChain);
+  void resolveScopeIds(VariableDeclaration* variableDeclaration);
+  void resolveScopeIds(ReturnStatement* returnStatement);
+  void resolveScopeIds(TypeRef& typeRef);
 
 private:
   std::vector<Scope*> scopeStack;

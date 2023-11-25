@@ -106,14 +106,16 @@ Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& inter
         IntermediateExpressionItem& callable = intermediate[i-1];
         IntermediateExpressionItem& args = intermediate[i+1];
 
-        opNode->left = callable.val.expression();
-        opNode->callArgs = std::move(args.val.callArgs());
+        Op::Call call;
+        call.callable = callable.val.expression();
+        call.callArgs = std::move(args.val.callArgs());
         intermediate.erase(intermediate.begin() + i, intermediate.begin() + (i+2));
 
         opNode->type = op;
         Expression* expression = makeNode<Expression>();
         expression->val = opNode;
-        expression->source = SourceRange(opNode->left->source.start, args.source.end);
+        expression->source = SourceRange(call.callable->source.start, args.source.end);
+        opNode->args = std::move(call);
 
         intermediate[i-1] = IntermediateExpressionItem(expression, expression->source);
         i -= 2;
@@ -122,13 +124,15 @@ Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& inter
       case Op::Type::LogicalNot:
       case Op::Type::UnaryMinus:
       {
-        opNode->left = intermediate[i+1].val.expression();
+        Op::Unary unary;
+        unary.expression = intermediate[i+1].val.expression();
         intermediate.erase(intermediate.begin() + i, intermediate.begin() + (i+1));
 
         opNode->type = op;
         Expression* expression = makeNode<Expression>();
         expression->val = opNode;
-        expression->source = SourceRange(intermediate[i].source.start, opNode->left->source.end);
+        expression->source = SourceRange(intermediate[i].source.start, unary.expression->source.end);
+        opNode->args = std::move(unary);
 
         intermediate[i] = IntermediateExpressionItem(expression, expression->source);
         break;
@@ -143,14 +147,16 @@ Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& inter
       case Op::Type::LogicalOr:
       case Op::Type::MemberAccess:
       {
-        opNode->left = intermediate[i-1].val.expression();
-        opNode->right = intermediate[i+1].val.expression();
+        Op::Binary binary;
+        binary.left = intermediate[i-1].val.expression();
+        binary.right = intermediate[i+1].val.expression();
         intermediate.erase(intermediate.begin() + i, intermediate.begin() + (i+2));
 
         opNode->type = op;
         Expression* expression = makeNode<Expression>();
         expression->val = opNode;
-        expression->source = SourceRange(opNode->left->source.start, opNode->right->source.end);
+        expression->source = SourceRange(binary.left->source.start, binary.right->source.end);
+        opNode->args = std::move(binary);
 
         intermediate[i-1] = IntermediateExpressionItem(expression, expression->source);
         i -= 2;

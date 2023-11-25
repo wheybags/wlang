@@ -6,7 +6,7 @@
 void SemanticAnalyser::run(MergedAst& ast)
 {
   for (AstChunk* chunk : ast)
-    resolveTypeRefs(chunk->root);
+    resolveScopeIds(chunk->root);
 
   for (AstChunk* chunk : ast)
     run(chunk->root);
@@ -24,7 +24,6 @@ void SemanticAnalyser::run(Root* root)
 
 void SemanticAnalyser::run(Func* func)
 {
-  release_assert(func->returnType.typeResolved->defined());
   run(func->funcBody, func);
 }
 
@@ -38,11 +37,11 @@ void SemanticAnalyser::run(Block* block, Func* func)
 
 void SemanticAnalyser::run(Class* classN)
 {
-  for (auto& pair : classN->memberVariables)
+  for (VariableDeclaration* variableDeclaration : classN->memberVariables)
   {
-    VariableDeclaration* variableDeclaration = pair.second;
     run(variableDeclaration);
-    release_assert(variableDeclaration->type.typeResolved != classN->type || variableDeclaration->type.pointerDepth > 0);
+    // TODO: recursive check
+    release_assert(variableDeclaration->type != classN->type->reference());
   }
 }
 
@@ -83,13 +82,11 @@ void SemanticAnalyser::run(Expression* expression)
   {
     case Expression::Val::Tag::Id:
     {
-      VariableDeclaration* var = this->scopeStack.back()->lookupVar(expression->val.id());
-      release_assert(var);
-
+      VariableDeclaration* var = expression->val.id().resolved.variableDeclaration();
       if (!expression->source.isAfterEndOf(var->source))
       {
         message_and_abort_fmt("%s (%d:%d) used before definition (%d:%d)",
-                              expression->val.id().c_str(),
+                              expression->val.id().str.c_str(),
                               expression->source.start.y, expression->source.start.x,
                               var->source.start.y, var->source.start.x);
       }
@@ -120,43 +117,44 @@ void SemanticAnalyser::run(Expression* expression)
         case Op::Type::LogicalAnd:
         case Op::Type::LogicalOr:
         {
-          run(op->left);
-          run(op->right);
-          release_assert(op->left->type == op->right->type);
+          Op::Binary& binary = op->args.binary();
+          run(binary.left);
+          run(binary.right);
+          release_assert(binary.left->type == binary.right->type);
           expression->type = BuiltinTypes::inst.tBool.reference();
           break;
         }
 
         case Op::Type::LogicalNot:
         {
-          run(op->left);
-          release_assert(op->left->type.pointerDepth > 0 ||
-                         op->left->type.typeResolved == &BuiltinTypes::inst.tBool ||
-                         op->left->type.typeResolved == &BuiltinTypes::inst.tI32);
+          Expression* arg = op->args.unary().expression;
+          run(arg);
+          release_assert(arg->type.pointerDepth > 0 ||
+                         arg->type.id.resolved.type() == &BuiltinTypes::inst.tBool ||
+                         arg->type.id.resolved.type() == &BuiltinTypes::inst.tI32);
           expression->type = BuiltinTypes::inst.tBool.reference();
           break;
         }
 
         case Op::Type::UnaryMinus:
         {
-          run(op->left);
-          release_assert(op->left->type.typeResolved == &BuiltinTypes::inst.tI32);
+          Expression* arg = op->args.unary().expression;
+          run(arg);
+          release_assert(arg->type == BuiltinTypes::inst.tI32.reference());
           expression->type = BuiltinTypes::inst.tI32.reference();
           break;
         }
 
         case Op::Type::Call:
         {
-          release_assert(op->left->val.isId());
+          Op::Call& callData = op->args.call();
+          Func* function = callData.callable->val.id().resolved.function();
 
-          Func* function = this->scopeStack.back()->lookupFunc(op->left->val.id());
-          release_assert(function);
-
-          release_assert(op->callArgs.size() == function->args.size());
-          for (int32_t i = 0; i < int32_t(op->callArgs.size()); i++)
+          release_assert(callData.callArgs.size() == function->args.size());
+          for (int32_t i = 0; i < int32_t(callData.callArgs.size()); i++)
           {
-            run(op->callArgs[i]);
-            release_assert(op->callArgs[i]->type == function->args[i]->type);
+            run(callData.callArgs[i]);
+            release_assert(callData.callArgs[i]->type == function->args[i]->type);
           }
 
           expression->type = function->returnType;
@@ -165,16 +163,11 @@ void SemanticAnalyser::run(Expression* expression)
 
         case Op::Type::MemberAccess:
         {
-          run(op->left);
-          release_assert(op->right->val.isId());
-
-          release_assert(op->left->type.pointerDepth <= 1);
-          release_assert(op->left->type.typeResolved->typeClass);
-
-          auto it = op->left->type.typeResolved->typeClass->memberVariables.find(op->right->val.id());
-          release_assert(it != op->left->type.typeResolved->typeClass->memberVariables.end());
-
-          expression->type = it->second->type;
+          Op::MemberAccess& memberAccess = op->args.memberAccess();
+          run(memberAccess.expression);
+          release_assert(memberAccess.expression->type.pointerDepth <= 1);
+          release_assert(memberAccess.expression->type.id.resolved.type()->typeClass);
+          expression->type = memberAccess.member.resolved.variableDeclaration()->type;
           break;
         }
 
@@ -183,10 +176,11 @@ void SemanticAnalyser::run(Expression* expression)
         case Op::Type::Multiply:
         case Op::Type::Divide:
         {
-          run(op->left);
-          run(op->right);
-          release_assert(op->left->type == BuiltinTypes::inst.tI32.reference());
-          release_assert(op->right->type == BuiltinTypes::inst.tI32.reference());
+          Op::Binary& binary = op->args.binary();
+          run(binary.left);
+          run(binary.right);
+          release_assert(binary.left->type == BuiltinTypes::inst.tI32.reference());
+          release_assert(binary.right->type == BuiltinTypes::inst.tI32.reference());
           expression->type = BuiltinTypes::inst.tI32.reference();
           break;
         }
@@ -200,14 +194,11 @@ void SemanticAnalyser::run(Expression* expression)
       message_and_abort("empty expression!");
   }
 
-  release_assert(expression->type.typeResolved);
+  release_assert(expression->type.id.resolved.type());
 }
 
 void SemanticAnalyser::run(VariableDeclaration* variableDeclaration)
 {
-  release_assert(variableDeclaration->type.typeResolved);
-  release_assert(variableDeclaration->type.typeResolved->defined());
-
   if (variableDeclaration->initialiser)
   {
     run(variableDeclaration->initialiser);
@@ -241,77 +232,166 @@ void SemanticAnalyser::run(IfElseChain* ifElseChain, Func* func)
   }
 }
 
-void SemanticAnalyser::resolveTypeRefs(Root* root)
+void SemanticAnalyser::resolveScopeIds(Root* root)
 {
   this->scopeStack.emplace_back(root->funcList->scope);
   for (Func* func : root->funcList->functions)
-    resolveTypeRefs(func);
+    resolveScopeIds(func);
   for (Class* classN : root->funcList->classes)
-    resolveTypeRefs(classN);
+    resolveScopeIds(classN);
   this->scopeStack.resize(this->scopeStack.size()-1);
 }
 
-void SemanticAnalyser::resolveTypeRefs(Class* classN)
+void SemanticAnalyser::resolveScopeIds(Class* classN)
 {
-  for (auto& pair : classN->memberVariables)
-  {
-    VariableDeclaration* variableDeclaration = pair.second;
-    resolveTypeRefs(variableDeclaration);
-  }
+  for (VariableDeclaration* variableDeclaration : classN->memberVariables)
+    resolveScopeIds(variableDeclaration);
 }
 
-void SemanticAnalyser::resolveTypeRefs(Func* func)
+void SemanticAnalyser::resolveScopeIds(Func* func)
 {
-  resolveTypeRefs(func->returnType);
+  resolveScopeIds(func->returnType);
   for (VariableDeclaration* arg : func->args)
-    resolveTypeRefs(arg);
-  resolveTypeRefs(func->funcBody);
+    resolveScopeIds(arg);
+  resolveScopeIds(func->funcBody);
 }
 
-void SemanticAnalyser::resolveTypeRefs(Block* block)
+void SemanticAnalyser::resolveScopeIds(Block* block)
 {
   this->scopeStack.emplace_back(block->scope);
   for (Statement* statement : block->statements)
-    resolveTypeRefs(statement);
+    resolveScopeIds(statement);
   this->scopeStack.resize(this->scopeStack.size()-1);
 }
 
-void SemanticAnalyser::resolveTypeRefs(Statement* statement)
+void SemanticAnalyser::resolveScopeIds(Statement* statement)
 {
   switch (statement->tag())
   {
-    case Statement::Tag::IfElseChain:
-      resolveTypeRefs(statement->ifElseChain());
+    case Statement::Tag::Return:
+      resolveScopeIds(statement->returnStatment());
       break;
     case Statement::Tag::Variable:
-      resolveTypeRefs(statement->variable());
+      resolveScopeIds(statement->variable());
       break;
     case Statement::Tag::Assignment:
+      resolveScopeIds(statement->assignment());
+      break;
     case Statement::Tag::Expression:
-    case Statement::Tag::Return:
+      resolveScopeIds(statement->expression());
+      break;
+    case Statement::Tag::IfElseChain:
+      resolveScopeIds(statement->ifElseChain());
       break;
     case Statement::Tag::None:
       message_and_abort("bad statement");
   }
 }
 
-void SemanticAnalyser::resolveTypeRefs(IfElseChain* ifElseChain)
+void SemanticAnalyser::resolveScopeIds(IfElseChain* ifElseChain)
 {
   for (int32_t i = 0; i < int32_t(ifElseChain->items.size()); i++)
   {
     IfElseChainItem* item = ifElseChain->items[i];
-    resolveTypeRefs(item->block);
+    resolveScopeIds(item->block);
   }
 }
 
-void SemanticAnalyser::resolveTypeRefs(VariableDeclaration* variableDeclaration)
+void SemanticAnalyser::resolveScopeIds(VariableDeclaration* variableDeclaration)
 {
-  resolveTypeRefs(variableDeclaration->type);
+  resolveScopeIds(variableDeclaration->type);
+  if (variableDeclaration->initialiser)
+    resolveScopeIds(variableDeclaration->initialiser);
 }
 
-void SemanticAnalyser::resolveTypeRefs(TypeRef& typeRef)
+void SemanticAnalyser::resolveScopeIds(TypeRef& typeRef)
 {
-  typeRef.typeResolved = scopeStack.back()->lookupType(typeRef.typeName);
-  release_assert(typeRef.typeResolved);
+  typeRef.id.resolveType(*scopeStack.back());
+  release_assert(typeRef.id.resolved.type());
+}
+
+void SemanticAnalyser::resolveScopeIds(Expression* expression)
+{
+  switch (expression->val.tag())
+  {
+    case Expression::Val::Tag::Id:
+    {
+      expression->val.id().resolveVariableDeclaration(*scopeStack.back());
+      release_assert(expression->val.id().resolved.variableDeclaration());
+      break;
+    }
+
+    case Expression::Val::Tag::Int32:
+    case Expression::Val::Tag::Bool:
+      break;
+
+    case Expression::Val::Tag::Op:
+    {
+      Op* op = expression->val.op();
+      switch (op->type)
+      {
+        case Op::Type::CompareEqual:
+        case Op::Type::CompareNotEqual:
+        case Op::Type::LogicalAnd:
+        case Op::Type::LogicalOr:
+        case Op::Type::Add:
+        case Op::Type::Subtract:
+        case Op::Type::Multiply:
+        case Op::Type::Divide:
+        {
+          Op::Binary& binary = op->args.binary();
+          resolveScopeIds(binary.left);
+          resolveScopeIds(binary.right);
+          break;
+        }
+
+        case Op::Type::UnaryMinus:
+        case Op::Type::LogicalNot:
+        {
+          resolveScopeIds(op->args.unary().expression);
+          break;
+        }
+
+        case Op::Type::Call:
+        {
+          Op::Call& call = op->args.call();
+          release_assert(call.callable->val.isId()); // TODO: this doesn't belong here. Fix when implementing function pointers
+          call.callable->val.id().resolveFunction(*scopeStack.back());
+          release_assert(call.callable->val.id().resolved.function());
+          for (int32_t i = 0; i < int32_t(call.callArgs.size()); i++)
+            resolveScopeIds(call.callArgs[i]);
+          break;
+        }
+
+        case Op::Type::MemberAccess:
+        {
+          Op::MemberAccess& memberAccess = op->args.memberAccess();
+          resolveScopeIds(memberAccess.expression);
+          memberAccess.member.resolveVariableDeclaration(*scopeStack.back());
+          release_assert(memberAccess.member.resolved.variableDeclaration());
+          break;
+        }
+
+        case Op::Type::ENUM_END:
+          message_and_abort("empty op!");
+      }
+      break;
+    }
+
+    case Expression::Val::Tag::None:
+      message_and_abort("empty expression!");
+
+  }
+}
+
+void SemanticAnalyser::resolveScopeIds(Assignment* assignment)
+{
+  resolveScopeIds(assignment->left);
+  resolveScopeIds(assignment->right);
+}
+
+void SemanticAnalyser::resolveScopeIds(ReturnStatement* returnStatement)
+{
+  resolveScopeIds(returnStatement->retval);
 }
 
