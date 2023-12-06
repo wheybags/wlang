@@ -558,11 +558,11 @@ int main()
   dumpFirstFollows(wlangGrammar);
 
   std::filesystem::path rootPath = getPathToThisExecutable();
-  while (!std::filesystem::exists(rootPath / "Parser.cpp"))
+  while (!std::filesystem::exists(rootPath / "src"))
     rootPath = rootPath.parent_path();
 
-  std::filesystem::path parserImplementationPath = rootPath / "ParserRules.inl";
-  std::filesystem::path parserDeclarationPath = rootPath / "ParserRulesDeclarations.inl";
+  std::filesystem::path parserImplementationPath = rootPath / "src" / "ParserRules.inl";
+  std::filesystem::path parserDeclarationPath = rootPath / "src" / "ParserRulesDeclarations.inl";
 
   ParserSource parserSource = generateParser(wlangGrammar);
 
