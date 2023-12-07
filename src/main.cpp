@@ -1,110 +1,37 @@
-#include "Tokeniser.hpp"
-#include "Parser.hpp"
-#include "PlainCGenerator.hpp"
-#include "SemanticAnalyser.hpp"
-#include "MergedAst.hpp"
 
-std::string otherW = R"STRING_RAW(
-  bool b()
-  {
-    return false;
-  }
-)STRING_RAW";
+int WLangMain(int argc, char** argv);
 
+#if WIN32
+#include <windows.h>
+#include <stringapiset.h>
+#include <string>
+#include <vector>
 
-std::string mainW = R"STRING_RAW(
-//  i32 ff(Vec2i* vec)
-//  {
-////    Vec2f uuu;
-//    false;
-//    bool a = true;
-//    vec.x = 1;
-//    Vec2i vec2;
-//    func(1,2);
-//    return vec2.x;
-//  }
-
-  class Vec2i
-  {
-    i32 x = 0 + 23;
-    i32 y = 0;
-    blah b;
-  }
-
-  class blah
-  {
-    i32 iii;
-    blah2* b2;
-  }
-
-  class blah2 { i32 jjj; }
-
-  // blah blah
-  bool func(i32 x, i32 y)
-  {
-    Vec2i pos;
-    i32 val = x + 2 * y / 3;// + pos.x; // undefined = poop()
-
-    if (1 == 1)
-    {
-      return 1 == 1;
-    }
-    else if (1 == 2)
-    {
-      return 1 == 2;
-    }
-    else
-    {
-      return 1 != 1;
-    }
-
-    return x == 1 && 1 == 1 || 1 == 1;
-  }
-
-  i32 main()
-  {
-    b();
-    i32 var;
-    var = 1;
-    i32 var2 = 2;
-    bool aa = 1 != 2;
-    bool notAa = !aa;
-    i32 negative = -var2 + 12;
-    1;
-    func(var, var2 + 3 - 1);
-    return 0;
-  }
-)STRING_RAW";
-
-
-int main()
+std::string wstringToUtf8(std::wstring_view wstr)
 {
-  MergedAst mergedAst;
+  if (wstr.empty())
+    return {};
 
-  auto add = [&](std::string_view path, std::string_view inputString)
-  {
-    AstChunk* ast = mergedAst.create(path);
-    std::vector<Token> tokens = tokenise(inputString);
-    parse(*ast, tokens);
-    mergedAst.link(ast);
-  };
+  int sizeNeeded = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), int(wstr.length()), nullptr, 0, nullptr, nullptr);
 
-  add("main.w", mainW);
-  add("other.w", otherW);
-
-  SemanticAnalyser semanticAnalyser;
-  semanticAnalyser.run(mergedAst);
-
-  for (const AstChunk* chunk : mergedAst)
-  {
-    for (const Func* function : chunk->root->funcList->functions)
-    {
-      PlainCGenerator generator;
-      generator.generate(function);
-      puts(generator.output().c_str());
-      puts("=================");
-    }
-  }
-
-  return 0;
+  std::string retval(sizeNeeded, 0);
+  WideCharToMultiByte(CP_UTF8, 0, wstr.data(), int(wstr.length()), &retval[0], sizeNeeded, nullptr, nullptr);
+  return retval;
 }
+
+int wmain(int argc, wchar_t** argv)
+{
+  std::vector<std::string> newArgStrs;
+  for (int i = 0; i < argc; i++)
+    newArgStrs.emplace_back(wstringToUtf8(argv[i]));
+
+  std::vector<char*> newArgvArray;
+  for (int i = 0; i < argc; i++)
+    newArgvArray.emplace_back(newArgStrs[i].data());
+  newArgvArray.emplace_back(nullptr);
+
+  return WLangMain(argc, newArgvArray.data());
+}
+#else
+int main(int argc, char** argv) { return WLangMain(argc, argv); }
+#endif

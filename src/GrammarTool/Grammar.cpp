@@ -1,7 +1,7 @@
 #include <functional>
 #include <sstream>
 #include "Grammar.hpp"
-#include "../StringUtil.hpp"
+#include "../Common/StringUtil.hpp"
 
 
 // Man, I forgot a lot of my compiler design theory since college...

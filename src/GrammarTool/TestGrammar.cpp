@@ -1,5 +1,5 @@
 #include "Grammar.hpp"
-#include "../Assert.hpp"
+#include "../Common/Assert.hpp"
 
 void test_can_be_nil()
 {

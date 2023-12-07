@@ -2,11 +2,7 @@
 #include "Grammar.hpp"
 #include "TestGrammar.hpp"
 #include "ParserGenerator.hpp"
-#include <filesystem>
-
-#ifdef _WIN32
-#include <windows.h>
-#endif
+#include "../Common/Filesystem.hpp"
 
 const char* wlangGrammarStr = R"STR(
   Root <{Root*}> =
@@ -437,64 +433,7 @@ const char* wlangGrammarStr = R"STR(
     }};
 )STR";
 
-std::filesystem::path getPathToThisExecutable()
-{
-#ifdef WIN32
-  std::vector<wchar_t> buff;
-  buff.resize(8192);
-  GetModuleFileNameW(nullptr, buff.data(), DWORD(buff.size()));
-  return buff.data();
-#else
-# error "implement me"
-#endif
-}
 
-FILE* fopen(const std::filesystem::path& path, const std::string& mode)
-{
-#ifdef WIN32
-  std::wstring wideMode;
-  for (char c: mode)
-    wideMode.push_back(c);
-
-  return _wfopen(path.wstring().c_str(), wideMode.c_str());
-#else
-  return fopen(path.c_str(), mode.c_str());
-#endif
-}
-
-std::string readWholeFileAsString(const std::filesystem::path& path)
-{
-  FILE* f = fopen(path, "rb");
-  if (!f)
-    return {};
-
-  release_assert(fseek(f, 0, SEEK_END) == 0);
-#ifdef WIN32
-  int64_t size = _ftelli64(f);
-#else
-  int64_t size = ftell(f);
-#endif
-
-  release_assert(size >= 0);
-
-  release_assert(fseek(f, 0, SEEK_SET) == 0);
-
-  std::string retval;
-  retval.resize(size);
-  release_assert(int64_t(fread(retval.data(), 1, size, f)) == size);
-
-  fclose(f);
-
-  return retval;
-}
-
-void overwriteFileWithString(const std::filesystem::path& path, const std::string_view string)
-{
-  FILE* f = fopen(path, "wb");
-  release_assert(f);
-  release_assert(fwrite(string.data(), 1, string.size(), f) == string.size());
-  fclose(f);
-}
 
 void dumpFirstFollows(Grammar& grammar)
 {
@@ -558,7 +497,7 @@ int main()
   dumpFirstFollows(wlangGrammar);
 
   std::filesystem::path rootPath = getPathToThisExecutable();
-  while (!std::filesystem::exists(rootPath / "src"))
+  while (!std::filesystem::exists(rootPath / "src" / "Parser.cpp"))
     rootPath = rootPath.parent_path();
 
   std::filesystem::path parserImplementationPath = rootPath / "src" / "ParserRules.inl";
@@ -566,8 +505,8 @@ int main()
 
   ParserSource parserSource = generateParser(wlangGrammar);
 
-  overwriteFileWithString(parserImplementationPath, parserSource.implementationSource);
-  overwriteFileWithString(parserDeclarationPath, parserSource.declarationSource);
+  release_assert(overwriteFileWithString(parserImplementationPath, parserSource.implementationSource));
+  release_assert(overwriteFileWithString(parserDeclarationPath, parserSource.declarationSource));
 
   return 0;
 }

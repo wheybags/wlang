@@ -1,6 +1,6 @@
 #include "Tokeniser.hpp"
-#include "StringUtil.hpp"
-#include "Assert.hpp"
+#include "Common/StringUtil.hpp"
+#include "Common/Assert.hpp"
 #include <optional>
 
 const std::vector<std::pair<std::string_view, Token::Type>> keywordMapping

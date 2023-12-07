@@ -1,7 +1,7 @@
 #include "ParserGenerator.hpp"
 #include <string>
 #include "Grammar.hpp"
-#include "../StringUtil.hpp"
+#include "../Common/StringUtil.hpp"
 
 ParserSource generateParser(const Grammar& grammar)
 {

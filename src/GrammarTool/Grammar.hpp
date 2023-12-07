@@ -2,7 +2,7 @@
 #include <unordered_map>
 #include <unordered_set>
 #include <utility>
-#include "../Assert.hpp"
+#include "../Common/Assert.hpp"
 
 struct NonTerminal;
 struct ProductionItem

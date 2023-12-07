@@ -1,6 +1,6 @@
 #include "PlainCGenerator.hpp"
-#include "StringUtil.hpp"
-#include "Assert.hpp"
+#include "Common/StringUtil.hpp"
+#include "Common/Assert.hpp"
 #include <unordered_map>
 #include <functional>
 
@@ -72,7 +72,7 @@ void PlainCGenerator::generate(const Root *root)
 static const std::unordered_map<std::string, std::string> builtinTypeMapping
 {
   {"i32", "int"},
-  {"bool", "bool"}
+  {"bool", "char"}
 };
 
 void PlainCGenerator::generate(const FuncList* node)
@@ -178,11 +178,11 @@ void PlainCGenerator::generate(const Statement* node, OutputString& str)
   }
 }
 
-std::string PlainCGenerator::generate(const VariableDeclaration* variableDeclaration)
+std::string PlainCGenerator::generate(const VariableDeclaration* variableDeclaration, bool suppressInitialiser)
 {
   this->referenceType(variableDeclaration->type);
 
-  Class* typeClass = variableDeclaration->type.pointerDepth == 0 ? variableDeclaration->type.id.resolved.type()->typeClass : nullptr;
+  Class* typeClass = variableDeclaration->type.id.resolved.type()->typeClass;
 
   std::string str;
   if (typeClass)
@@ -190,7 +190,7 @@ std::string PlainCGenerator::generate(const VariableDeclaration* variableDeclara
     release_assert(!variableDeclaration->initialiser && "not supported yet");
 
     // TODO: reimplement this at the AST level?
-    str += strType(variableDeclaration->type) + " " + variableDeclaration->name;// + "; ";
+    str += "struct " + strType(variableDeclaration->type) + " " + variableDeclaration->name;// + "; ";
 //    str += strType(variableDeclaration->type) + "__init_empty(&" + variableDeclaration->name + ")";
   }
   else
@@ -198,7 +198,7 @@ std::string PlainCGenerator::generate(const VariableDeclaration* variableDeclara
     str += strType(variableDeclaration->type) + " " + variableDeclaration->name;
   }
 
-  if (variableDeclaration->initialiser)
+  if (!suppressInitialiser && variableDeclaration->initialiser)
   {
     str += " = ";
     str += generate(variableDeclaration->initialiser);
@@ -231,7 +231,7 @@ std::string PlainCGenerator::generate(const Expression* node)
 
     case Expression::Val::Tag::Bool:
     {
-      str += node->val.boolean() ? "true" : "false";
+      str += node->val.boolean() ? "1" : "0";
       break;
     }
 
@@ -385,8 +385,8 @@ void PlainCGenerator::generateClassDeclaration(const Class* node, OutputString& 
   str.appendLine("struct " + node->type->name);
   str.appendLine("{");
 
-  for ( VariableDeclaration* variableDeclaration : node->memberVariables)
-    str.appendLine(strType(variableDeclaration->type) + " " + variableDeclaration->name + ";");
+  for (VariableDeclaration* variableDeclaration : node->memberVariables)
+    str.appendLine(generate(variableDeclaration, true) + ";");
 
   str.appendLine("};");
   str.appendLine();
