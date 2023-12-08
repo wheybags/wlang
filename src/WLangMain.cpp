@@ -4,6 +4,7 @@
 #include "SemanticAnalyser.hpp"
 #include "MergedAst.hpp"
 #include "Common/Filesystem.hpp"
+#include "Process.hpp"
 
 int WLangMain(int argc, char** argv)
 {
@@ -48,8 +49,17 @@ int WLangMain(int argc, char** argv)
       PlainCGenerator generator;
       generator.generate(function);
       std::string output = generator.output();
-      fs::path outputFile = buildDirectory / (function->name + ".c");
-      release_assert(overwriteFileWithString(outputFile, output));
+      fs::path outputCFile = buildDirectory / (function->name + ".c");
+      fs::path outputObjFile = buildDirectory / (function->name + ".o");
+      release_assert(overwriteFileWithString(outputCFile, output));
+
+      fs::path compilerPath = L"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.36.32532\\bin\\Hostx64\\x64\\cl.exe";
+
+      std::string compilerOutput;
+      int32_t exitCode = 0;
+      release_assert(runProcess({compilerPath.string(), "/Fo" + outputObjFile.string(), "/c", outputCFile.string()}, compilerOutput, exitCode));
+      if (exitCode != 0)
+        message_and_abort(compilerOutput.c_str());
     }
   }
 

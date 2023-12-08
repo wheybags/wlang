@@ -2,28 +2,15 @@
 int WLangMain(int argc, char** argv);
 
 #if WIN32
-#include <windows.h>
-#include <stringapiset.h>
 #include <string>
 #include <vector>
-
-std::string wstringToUtf8(std::wstring_view wstr)
-{
-  if (wstr.empty())
-    return {};
-
-  int sizeNeeded = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), int(wstr.length()), nullptr, 0, nullptr, nullptr);
-
-  std::string retval(sizeNeeded, 0);
-  WideCharToMultiByte(CP_UTF8, 0, wstr.data(), int(wstr.length()), &retval[0], sizeNeeded, nullptr, nullptr);
-  return retval;
-}
+#include "Common/StringUtil.hpp"
 
 int wmain(int argc, wchar_t** argv)
 {
   std::vector<std::string> newArgStrs;
   for (int i = 0; i < argc; i++)
-    newArgStrs.emplace_back(wstringToUtf8(argv[i]));
+    newArgStrs.emplace_back(Str::wstringToUtf8(argv[i]));
 
   std::vector<char*> newArgvArray;
   for (int i = 0; i < argc; i++)

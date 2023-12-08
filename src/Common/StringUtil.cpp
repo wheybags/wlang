@@ -1,6 +1,10 @@
 #include "StringUtil.hpp"
 #include <cstring>
 
+#ifdef WIN32
+#include <windows.h>
+#endif
+
 namespace Str
 {
   bool isSpace(char c)
@@ -58,4 +62,30 @@ namespace Str
 
     return memcmp(str.data() + str.size() - suffix.size(), suffix.data(), suffix.size()) == 0;
   }
+
+#ifdef WIN32
+  std::string wstringToUtf8(std::wstring_view wstr)
+  {
+    if (wstr.empty())
+      return {};
+
+    int sizeNeeded = WideCharToMultiByte(CP_UTF8, 0, wstr.data(), int(wstr.length()), nullptr, 0, nullptr, nullptr);
+
+    std::string retval(sizeNeeded, 0);
+    WideCharToMultiByte(CP_UTF8, 0, wstr.data(), int(wstr.length()), &retval[0], sizeNeeded, nullptr, nullptr);
+    return retval;
+  }
+
+  std::wstring utf8ToWstring(std::string_view utf8)
+  {
+    if (utf8.empty())
+      return {};
+
+    int sizeNeeded = MultiByteToWideChar(CP_UTF8, 0, utf8.data(), int(utf8.length()), nullptr, 0);
+
+    std::wstring retval(sizeNeeded, 0);
+    MultiByteToWideChar(CP_UTF8, 0, utf8.data(), int(utf8.length()), &retval[0], sizeNeeded);
+    return retval;
+  }
+#endif
 }
