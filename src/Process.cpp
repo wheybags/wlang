@@ -94,7 +94,7 @@ Environment:
     }
 }
 
-bool runProcess(const std::vector<std::string>& args, std::string& output, int32_t& exitCode)
+bool runProcess(const std::vector<std::string>& args, std::string& output, int32_t& exitCode, void* environmentPtr)
 {
   std::wstring commandLine;
   for (size_t i = 0; i < args.size(); i++)
@@ -110,6 +110,7 @@ bool runProcess(const std::vector<std::string>& args, std::string& output, int32
   STARTUPINFOW si = {};
   SECURITY_ATTRIBUTES saAttr = {};
   bool retval = false;
+  DWORD flags = 0;
 
   saAttr.nLength = sizeof(SECURITY_ATTRIBUTES);
   saAttr.bInheritHandle = TRUE;
@@ -130,13 +131,17 @@ bool runProcess(const std::vector<std::string>& args, std::string& output, int32
   si.hStdOutput = writePipe;
   si.dwFlags |= STARTF_USESTDHANDLES;
 
+  flags = CREATE_NO_WINDOW;
+  if (environmentPtr)
+    flags |= CREATE_UNICODE_ENVIRONMENT;
+
   if (!CreateProcessW(nullptr, // No module name (use command line)
                       commandLine.data(), // Command line
                       nullptr, // Process handle not inheritable
                       nullptr, // Thread handle not inheritable
                       TRUE, // Set handle inheritance to TRUE
-                      CREATE_NO_WINDOW,
-                      nullptr, // Use parent's environment block
+                      flags,
+                      environmentPtr,
                       nullptr, // Use parent's starting directory
                       &si, // Pointer to STARTUPINFO structure
                       &pi) // Pointer to PROCESS_INFORMATION structure

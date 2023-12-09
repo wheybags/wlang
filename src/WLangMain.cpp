@@ -5,6 +5,8 @@
 #include "MergedAst.hpp"
 #include "Common/Filesystem.hpp"
 #include "Process.hpp"
+#include "CCompiler.hpp"
+#include "CCompilerMSVC.hpp"
 
 int WLangMain(int argc, char** argv)
 {
@@ -42,6 +44,9 @@ int WLangMain(int argc, char** argv)
   std::error_code _;
   fs::create_directories(buildDirectory, _);
 
+  std::unique_ptr<CCompiler> cCompiler = std::unique_ptr<CCompiler>(new CCompilerMSVC());
+  std::vector<fs::path> objects;
+
   for (const AstChunk* chunk : mergedAst)
   {
     for (const Func* function : chunk->root->funcList->functions)
@@ -53,15 +58,12 @@ int WLangMain(int argc, char** argv)
       fs::path outputObjFile = buildDirectory / (function->name + ".o");
       release_assert(overwriteFileWithString(outputCFile, output));
 
-      fs::path compilerPath = L"C:\\Program Files\\Microsoft Visual Studio\\2022\\Community\\VC\\Tools\\MSVC\\14.36.32532\\bin\\Hostx64\\x64\\cl.exe";
-
-      std::string compilerOutput;
-      int32_t exitCode = 0;
-      release_assert(runProcess({compilerPath.string(), "/Fo" + outputObjFile.string(), "/c", outputCFile.string()}, compilerOutput, exitCode));
-      if (exitCode != 0)
-        message_and_abort(compilerOutput.c_str());
+      cCompiler->compile(outputCFile, outputObjFile);
+      objects.emplace_back(std::move(outputObjFile));
     }
   }
+
+  cCompiler->linkExecutable(objects, buildDirectory / "main.exe");
 
   return 0;
 }
