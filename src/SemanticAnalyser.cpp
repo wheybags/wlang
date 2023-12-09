@@ -95,9 +95,9 @@ void SemanticAnalyser::run(Expression* expression)
       break;
     }
 
-    case Expression::Val::Tag::Int32:
+    case Expression::Val::Tag::IntegerConstant:
     {
-      expression->type = BuiltinTypes::inst.tI32.reference();
+      expression->type = expression->val.integerConstant().getType()->reference();
       break;
     }
 
@@ -131,7 +131,7 @@ void SemanticAnalyser::run(Expression* expression)
           run(arg);
           release_assert(arg->type.pointerDepth > 0 ||
                          arg->type.id.resolved.type() == &BuiltinTypes::inst.tBool ||
-                         arg->type.id.resolved.type() == &BuiltinTypes::inst.tI32);
+                         arg->type.id.resolved.type()->builtinNumeric);
           expression->type = BuiltinTypes::inst.tBool.reference();
           break;
         }
@@ -140,8 +140,8 @@ void SemanticAnalyser::run(Expression* expression)
         {
           Expression* arg = op->args.unary().expression;
           run(arg);
-          release_assert(arg->type == BuiltinTypes::inst.tI32.reference());
-          expression->type = BuiltinTypes::inst.tI32.reference();
+          release_assert(arg->type.pointerDepth == 0 && arg->type.id.resolved.type()->builtinNumeric);
+          expression->type = arg->type;
           break;
         }
 
@@ -179,9 +179,9 @@ void SemanticAnalyser::run(Expression* expression)
           Op::Binary& binary = op->args.binary();
           run(binary.left);
           run(binary.right);
-          release_assert(binary.left->type == BuiltinTypes::inst.tI32.reference());
-          release_assert(binary.right->type == BuiltinTypes::inst.tI32.reference());
-          expression->type = BuiltinTypes::inst.tI32.reference();
+          release_assert(binary.left->type.pointerDepth == 0 && binary.left->type.id.resolved.type()->builtinNumeric);
+          release_assert(binary.right->type.pointerDepth == 0 && binary.right->type.id.resolved.type()->builtinNumeric);
+          expression->type = BuiltinTypes::resolveBinaryOperatorPromotion(binary.left->type.id.resolved.type(), binary.right->type.id.resolved.type())->reference();
           break;
         }
         case Op::Type::ENUM_END:
@@ -321,7 +321,7 @@ void SemanticAnalyser::resolveScopeIds(Expression* expression)
       break;
     }
 
-    case Expression::Val::Tag::Int32:
+    case Expression::Val::Tag::IntegerConstant:
     case Expression::Val::Tag::Bool:
       break;
 

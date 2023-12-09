@@ -8,7 +8,7 @@
 //    func(1,2);
 //    return vec2.x;
 //  }
-
+//
 class Vec2i
 {
   i32 x = 0 + 23;
@@ -49,6 +49,7 @@ bool func(i32 x, i32 y)
 i32 main()
 {
   b();
+  i64 vvv = 100i64;
   i32 var;
   var = 1;
   i32 var2 = 2;

@@ -6,7 +6,7 @@ class CCompilerMSVC : public CCompiler
 {
 public:
   CCompilerMSVC();
-  virtual ~CCompilerMSVC() = default;
+  ~CCompilerMSVC() override = default;
 
   void compile(const fs::path& cFilePath, const fs::path& objectFilePath) override;
   void linkExecutable(const std::vector<fs::path>& objects, const fs::path& outputPath) override;

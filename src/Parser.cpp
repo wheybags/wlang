@@ -31,7 +31,7 @@ public:
   using IntermediateExpression = std::vector<IntermediateExpressionItem>;
   Expression* resolveIntermediateExpression(IntermediateExpression&& intermediate);
   std::string parseId();
-  int32_t parseInt32();
+  IntegerToken parseIntegerToken();
 
   #include "ParserRulesDeclarations.inl"
 
@@ -258,10 +258,10 @@ std::string Parser::parseId()
   return pop().idValue;
 }
 
-int32_t Parser::parseInt32()
+IntegerToken Parser::parseIntegerToken()
 {
-  release_assert(peek().type == Token::Type::Int32);
-  return pop().i32Value;
+  release_assert(peek().type == Token::Type::IntegerToken);
+  return pop().integerValue;
 }
 
 #include "ParserRules.inl"

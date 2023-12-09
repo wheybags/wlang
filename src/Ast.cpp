@@ -1,4 +1,5 @@
 #include "Ast.hpp"
+#include "BuiltinTypes.hpp"
 
 template<typename T>
 T* Scope::lookup(ScopeId& name)
@@ -77,4 +78,21 @@ void ScopeId::resolveVariableDeclaration(Scope& scope)
 void ScopeId::resolveType(Scope& scope)
 {
   scope.lookup<Type>(*this);
+}
+
+Type* IntegerConstant::getType() const
+{
+  switch (this->size)
+  {
+    case 8:
+      return &BuiltinTypes::inst.tI8;
+    case 16:
+      return &BuiltinTypes::inst.tI16;
+    case 32:
+      return &BuiltinTypes::inst.tI32;
+    case 64:
+      return &BuiltinTypes::inst.tI64;
+  }
+
+  message_and_abort("bad integer size");
 }

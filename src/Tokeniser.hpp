@@ -28,12 +28,18 @@ struct SourceRange
   bool isAfterEndOf(SourceRange other) const { return this->start >= other.end; }
 };
 
+struct IntegerToken
+{
+  int64_t val = 0;
+  int32_t size = 0;
+};
+
 struct Token
 {
   enum class Type
   {
     Id,
-    Int32,
+    IntegerToken,
     Comma,
     OpenBracket,
     CloseBracket,
@@ -62,7 +68,7 @@ struct Token
 
   Type type = {};
   std::string idValue = {};
-  int32_t i32Value = {};
+  IntegerToken integerValue;
 
   SourceRange source;
 };

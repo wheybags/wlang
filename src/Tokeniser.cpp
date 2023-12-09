@@ -34,7 +34,7 @@ const std::vector<std::pair<std::string_view, Token::Type>> tokenMapping
   {".", Token::Type::Dot},
 };
 
-std::optional<int32_t> parseInt32(std::string_view str)
+std::optional<int64_t> parseInteger(std::string_view str)
 {
   // TODO: overflow check
 
@@ -58,12 +58,13 @@ std::vector<Token> tokenise(std::string_view input)
   enum class Type
   {
     Id,
-    Int32,
+    Integer,
     Comment,
     None,
   };
 
   Type accumulatorType = Type::None;
+  int32_t integerSize = -1;
   int32_t accumulatorStartY = -1;
   int32_t accumulatorStartX = -1;
   std::string accumulator;
@@ -82,8 +83,8 @@ std::vector<Token> tokenise(std::string_view input)
 
     if (accumulatorType == Type::Id)
       tokens.emplace_back(Token{.type = Token::Type::Id, .idValue = accumulator, .source = source});
-    else if (accumulatorType == Type::Int32)
-      tokens.emplace_back(Token{.type = Token::Type::Int32, .i32Value = *parseInt32(accumulator), .source = source});
+    else if (accumulatorType == Type::Integer)
+      tokens.emplace_back(Token{.type = Token::Type::IntegerToken, .integerValue = {.val = *parseInteger(accumulator), .size = integerSize}, .source = source});
 
     accumulator.clear();
   };
@@ -189,7 +190,8 @@ std::vector<Token> tokenise(std::string_view input)
       else if (Str::isAlphaNumeric(input[0]))
       {
         accumulate(input[0]);
-        accumulatorType = Type::Int32;
+        accumulatorType = Type::Integer;
+        integerSize = 32; // default
         advance(1);
         continue;
       }
@@ -199,8 +201,29 @@ std::vector<Token> tokenise(std::string_view input)
       }
     }
 
-    if (accumulatorType == Type::Int32 && !Str::isNumeric(input[0]))
+    if (accumulatorType == Type::Integer && !Str::isNumeric(input[0]))
     {
+      if (input.starts_with("i64"))
+      {
+        integerSize = 64;
+        advance(3);
+      }
+      else if (input.starts_with("i32"))
+      {
+        integerSize = 32;
+        advance(3);
+      }
+      else if (input.starts_with("i16"))
+      {
+        integerSize = 16;
+        advance(3);
+      }
+      else if (input.starts_with("i8"))
+      {
+        integerSize = 8;
+        advance(2);
+      }
+
       breakToken();
       continue;
     }

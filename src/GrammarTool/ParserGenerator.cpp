@@ -82,7 +82,7 @@ ParserSource generateParser(const Grammar& grammar)
   std::unordered_map<std::string, std::string> tokenTypeMapping
   {
     {"$Id", "Id"},
-    {"$Int32", "Int32"},
+    {"$IntegerToken", "IntegerToken"},
     {"\",\"", "Comma"},
     {"\"(\"", "OpenBracket"},
     {"\")\"", "CloseBracket"},
@@ -112,7 +112,7 @@ ParserSource generateParser(const Grammar& grammar)
   std::unordered_map<std::string, std::string> idTokenMapping
   {
     {"$Id", "std::string"},
-    {"$Int32", "int32_t"},
+    {"$IntegerToken", "IntegerToken"},
   };
 
   auto sanitiseName = [](const std::string& ruleName)

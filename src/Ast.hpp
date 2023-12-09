@@ -60,10 +60,19 @@ struct TypeRef
 struct Type
 {
   std::string name;
-  bool builtin = false;
   Class* typeClass = nullptr; // user defined types will have a class, builtins have only name
+  bool builtin = false;
+  bool builtinNumeric = false;
 
   TypeRef reference() { return { .id = ScopeId(name, this) }; }
+};
+
+struct IntegerConstant
+{
+  int64_t val = 0;
+  int32_t size = 0;
+
+  Type* getType() const;
 };
 
 class Expression
@@ -71,7 +80,7 @@ class Expression
 public:
   #define FOR_EACH_TAGGED_UNION_TYPE(XX) \
     XX(id, Id, ScopeId) \
-    XX(i32, Int32, int32_t) \
+    XX(integerConstant, IntegerConstant, IntegerConstant) \
     XX(boolean, Bool, bool ) \
     XX(op, Op, Op*)
   #define CLASS_NAME Val

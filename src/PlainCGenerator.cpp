@@ -71,7 +71,10 @@ void PlainCGenerator::generate(const Root *root)
 
 static const std::unordered_map<std::string, std::string> builtinTypeMapping
 {
+  {"i8", "char"},
+  {"i16", "short"},
   {"i32", "int"},
+  {"i64", "long long int"},
   {"bool", "char"}
 };
 
@@ -223,9 +226,26 @@ std::string PlainCGenerator::generate(const Expression* node)
       break;
     }
 
-    case Expression::Val::Tag::Int32:
+    case Expression::Val::Tag::IntegerConstant:
     {
-      str += std::to_string(node->val.i32());
+      const IntegerConstant& integerConstant = node->val.integerConstant();
+      switch (integerConstant.size)
+      {
+        case 8:
+          str += "((char)" + std::to_string(integerConstant.val) + ")";
+          break;
+        case 16:
+          str += "((short)" + std::to_string(integerConstant.val) + ")";
+          break;
+        case 32:
+          str += std::to_string(integerConstant.val);
+          break;
+        case 64:
+          str += std::to_string(integerConstant.val) + "LL";
+          break;
+        default:
+          message_and_abort("bad integer size");
+      }
       break;
     }
 

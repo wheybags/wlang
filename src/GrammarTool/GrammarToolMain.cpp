@@ -126,11 +126,11 @@ const char* wlangGrammarStr = R"STR(
     {{ SourceRange idSource = peek().source; }}
     $Id StatementThatStartsWithId <{v0, idSource, statement}> ";"
   |
-    // statement that starts with an expression that starts with $Int32
-    $Int32
+    // statement that starts with an expression that starts with integer
+    $IntegerToken
     {{
       Expression* partial = makeNode<Expression>();
-      partial->val = v0;
+      partial->val = IntegerConstant { .val = v0.val, .size = v0.size };
       partial->source = lastPopped().source;
       IntermediateExpression intermediate;
       intermediate.emplace_back(partial, partial->source);
@@ -296,10 +296,10 @@ const char* wlangGrammarStr = R"STR(
       result.emplace_back(expression, expression->source);
     }} Expression'<{result}>
   |
-    $Int32
+    $IntegerToken
     {{
       Expression* expression = makeNode<Expression>();
-      expression->val = v0;
+      expression->val = IntegerConstant { .val = v0.val, .size = v0.size };
       expression->source = source;
       result.emplace_back(expression, expression->source);
     }} Expression'<{result}>
