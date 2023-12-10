@@ -63,19 +63,23 @@
 
 
 extern i8* malloc(i64 size);
-extern i32 puts(i8* str);
+
 
 i32 main()
 {
-  i8* str = malloc(64i64);
-  str[0] = 104i8; // h
-  str[1] = 101i8; // e
-  str[2] = 108i8; // l
-  str[3] = 108i8; // l
-  str[4] = 111i8; // o
-  str[5] = 32i8;  //
-  str[6] = 119i8; // w
-  str[7] = 46i8;  // .
-  str[8] = 0i8;
-  puts(str);
+  string str;
+  str.data = malloc(9i64);
+  str.data[0] = 104i8; // h
+  str.data[1] = 101i8; // e
+  str.data[2] = 108i8; // l
+  str.data[3] = 108i8; // l
+  str.data[4] = 111i8; // o
+  str.data[5] = 32i8;  //
+  str.data[6] = 119i8; // w
+  str.data[7] = 46i8;  // .
+  str.data[8] = 0i8;
+  str.length = 8i64;
+  printString(str);
+
+  return 0;
 }

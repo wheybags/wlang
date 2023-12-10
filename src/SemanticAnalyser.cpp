@@ -180,6 +180,12 @@ void SemanticAnalyser::run(Expression* expression)
           run(memberAccess.expression);
           release_assert(memberAccess.expression->type.pointerDepth <= 1);
           release_assert(memberAccess.expression->type.id.resolved.type()->typeClass);
+
+          // As an exception, we resolve this here, as it depends on fetching the scope of the actual type, which is not available during
+          // the normal resolveScopeIds pass.
+          memberAccess.member.resolveVariableDeclaration(*memberAccess.expression->type.id.resolved.type()->typeClass->memberScope);
+          release_assert(memberAccess.member.resolved.variableDeclaration());
+
           expression->type = memberAccess.member.resolved.variableDeclaration()->type;
           break;
         }
@@ -248,10 +254,19 @@ void SemanticAnalyser::run(IfElseChain* ifElseChain, Func* func)
 void SemanticAnalyser::resolveScopeIds(Root* root)
 {
   this->scopeStack.emplace_back(root->funcList->scope);
+
   for (Func* func : root->funcList->functions)
     resolveScopeIds(func);
+
   for (Class* classN : root->funcList->classes)
     resolveScopeIds(classN);
+
+  for (Func* func : root->funcList->functions)
+  {
+    if (!func->external)
+      resolveScopeIds(func->funcBody);
+  }
+
   this->scopeStack.resize(this->scopeStack.size()-1);
 }
 
@@ -266,9 +281,6 @@ void SemanticAnalyser::resolveScopeIds(Func* func)
   resolveScopeIds(func->returnType);
   for (VariableDeclaration* arg : func->args)
     resolveScopeIds(arg);
-
-  if (!func->external)
-    resolveScopeIds(func->funcBody);
 }
 
 void SemanticAnalyser::resolveScopeIds(Block* block)
@@ -390,8 +402,8 @@ void SemanticAnalyser::resolveScopeIds(Expression* expression)
         {
           Op::MemberAccess& memberAccess = op->args.memberAccess();
           resolveScopeIds(memberAccess.expression);
-          memberAccess.member.resolveVariableDeclaration(*scopeStack.back());
-          release_assert(memberAccess.member.resolved.variableDeclaration());
+          // Cannot resolve the member name yet, as it depends on the derived type of the MemberAccess::expression expression.
+          // So, as an exception, this is deferred to the next pass.
           break;
         }
 

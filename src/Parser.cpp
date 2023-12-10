@@ -132,7 +132,7 @@ Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& inter
         Expression* expression = makeNode<Expression>();
         expression->val = opNode;
         expression->source = SourceRange(subscript.item->source.start, subscript.index->source.end);
-        opNode->args = subscript;
+        opNode->args = std::move(subscript);
 
         intermediate[i-1] = IntermediateExpressionItem(expression, expression->source);
         i -= 2;
@@ -154,6 +154,25 @@ Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& inter
         intermediate[i] = IntermediateExpressionItem(expression, expression->source);
         break;
       }
+      case Op::Type::MemberAccess:
+      {
+        SourceRange range(intermediate[i-1].source.start, intermediate[i+1].source.end);
+
+        Op::MemberAccess memberAccess;
+        memberAccess.expression = intermediate[i-1].val.expression();
+        memberAccess.member = intermediate[i+1].val.expression()->val.id();
+        intermediate.erase(intermediate.begin() + i, intermediate.begin() + (i+2));
+
+        opNode->type = op;
+        Expression* expression = makeNode<Expression>();
+        expression->val = opNode;
+        expression->source = range;
+        opNode->args = std::move(memberAccess);
+
+        intermediate[i-1] = IntermediateExpressionItem(expression, expression->source);
+        i -= 2;
+        break;
+      }
       case Op::Type::Add:
       case Op::Type::Subtract:
       case Op::Type::Multiply:
@@ -162,7 +181,6 @@ Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& inter
       case Op::Type::CompareNotEqual:
       case Op::Type::LogicalAnd:
       case Op::Type::LogicalOr:
-      case Op::Type::MemberAccess:
       {
         Op::Binary binary;
         binary.left = intermediate[i-1].val.expression();

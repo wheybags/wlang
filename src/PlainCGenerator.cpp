@@ -32,7 +32,7 @@ std::string PlainCGenerator::output()
     {
       for (const VariableDeclaration* member: type->typeClass->memberVariables)
       {
-        if (type->builtin)
+        if (member->type.id.resolved.type()->builtin)
           continue;
 
         if (member->type.pointerDepth == 0)
@@ -202,7 +202,7 @@ std::string PlainCGenerator::generate(const VariableDeclaration* variableDeclara
     release_assert(!variableDeclaration->initialiser && "not supported yet");
 
     // TODO: reimplement this at the AST level?
-    str += "struct " + strType(variableDeclaration->type) + " " + variableDeclaration->name;// + "; ";
+    str += strType(variableDeclaration->type) + " " + variableDeclaration->name;// + "; ";
 //    str += strType(variableDeclaration->type) + "__init_empty(&" + variableDeclaration->name + ")";
   }
   else
@@ -459,7 +459,7 @@ std::string PlainCGenerator::strType(const TypeRef& type)
   std::string str;
 
   if (type.id.resolved.type()->typeClass)
-    str += type.id.resolved.type()->name;
+    str += "struct " + type.id.resolved.type()->name;
   else
     str += builtinTypeMapping.at(type.id.str);
 

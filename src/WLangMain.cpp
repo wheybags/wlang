@@ -36,6 +36,20 @@ int WLangMain(int argc, char** argv)
     }
   }
 
+  std::filesystem::path compilerRootPath = getPathToThisExecutable();
+  while (!std::filesystem::exists(compilerRootPath / "stdlib" ))
+    compilerRootPath = compilerRootPath.parent_path();
+
+  for (fs::path path : fs::recursive_directory_iterator(compilerRootPath / "stdlib"))
+  {
+    if (path.extension() == ".w")
+    {
+      std::string data;
+      release_assert(readWholeFileAsString(path, data));
+      add(path.string(), data);
+    }
+  }
+
   SemanticAnalyser semanticAnalyser;
   semanticAnalyser.run(mergedAst);
 
