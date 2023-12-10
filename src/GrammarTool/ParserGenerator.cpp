@@ -88,6 +88,8 @@ ParserSource generateParser(const Grammar& grammar)
     {"\")\"", "CloseBracket"},
     {"\"{\"", "OpenBrace"},
     {"\"}\"", "CloseBrace"},
+    {"\"[\"", "OpenSquareBracket"},
+    {"\"]\"", "CloseSquareBracket"},
     {"\"==\"", "CompareEqual"},
     {"\"!=\"", "CompareNotEqual"},
     {"\"&&\"", "LogicalAnd"},
@@ -106,6 +108,7 @@ ParserSource generateParser(const Grammar& grammar)
     {"\"else\"", "Else"},
     {"\"true\"", "True"},
     {"\"false\"", "False"},
+    {"\"extern\"", "Extern"},
     {"$End", "End"},
   };
 

@@ -24,7 +24,8 @@ void SemanticAnalyser::run(Root* root)
 
 void SemanticAnalyser::run(Func* func)
 {
-  run(func->funcBody, func);
+  if (!func->external)
+    run(func->funcBody, func);
 }
 
 void SemanticAnalyser::run(Block* block, Func* func)
@@ -161,6 +162,18 @@ void SemanticAnalyser::run(Expression* expression)
           break;
         }
 
+        case Op::Type::Subscript:
+        {
+          Op::Subscript& subscript = op->args.subscript();
+          run(subscript.item);
+          release_assert(subscript.item->type.pointerDepth > 0);
+          run(subscript.index);
+          release_assert(subscript.index->type.pointerDepth == 0 && subscript.index->type.id.resolved.type()->builtinNumeric);
+          expression->type = subscript.item->type;
+          expression->type.pointerDepth--;
+          break;
+        }
+
         case Op::Type::MemberAccess:
         {
           Op::MemberAccess& memberAccess = op->args.memberAccess();
@@ -253,7 +266,9 @@ void SemanticAnalyser::resolveScopeIds(Func* func)
   resolveScopeIds(func->returnType);
   for (VariableDeclaration* arg : func->args)
     resolveScopeIds(arg);
-  resolveScopeIds(func->funcBody);
+
+  if (!func->external)
+    resolveScopeIds(func->funcBody);
 }
 
 void SemanticAnalyser::resolveScopeIds(Block* block)
@@ -360,6 +375,14 @@ void SemanticAnalyser::resolveScopeIds(Expression* expression)
           release_assert(call.callable->val.id().resolved.function());
           for (int32_t i = 0; i < int32_t(call.callArgs.size()); i++)
             resolveScopeIds(call.callArgs[i]);
+          break;
+        }
+
+        case Op::Type::Subscript:
+        {
+          Op::Subscript& subscript = op->args.subscript();
+          resolveScopeIds(subscript.item);
+          resolveScopeIds(subscript.index);
           break;
         }
 

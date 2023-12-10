@@ -45,6 +45,8 @@ struct Token
     CloseBracket,
     OpenBrace,
     CloseBrace,
+    OpenSquareBracket,
+    CloseSquareBracket,
     CompareEqual,
     CompareNotEqual,
     LogicalAnd,
@@ -63,6 +65,7 @@ struct Token
     Else,
     True,
     False,
+    Extern,
     End
   };
 

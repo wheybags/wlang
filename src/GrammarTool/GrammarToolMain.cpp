@@ -28,6 +28,13 @@ const char* wlangGrammarStr = R"STR(
     }}
     FuncList'<{funcList}>
   |
+    ExternFuncDeclaration ";"
+    {{
+      funcList->functions.emplace_back(v0);
+      funcList->scope->functions.insert_or_assign(v0->name, Scope::Item<Func*>{.item = v0, .chunk = &ast});
+    }}
+    FuncList'<{funcList}>
+  |
     "class" $Id
     {{
       Type* type = makeNode<Type>();
@@ -61,6 +68,19 @@ const char* wlangGrammarStr = R"STR(
 
   FuncList' <{void}> <{FuncList* funcList}> =
     FuncList<{funcList}> | Nil;
+
+
+  ExternFuncDeclaration <{Func*}> =
+    "extern" Type $Id
+    {{
+      Func* func = makeNode<Func>();
+      func->returnType = v0;
+      func->name = std::move(v1);
+      func->external = true;
+    }}
+    "(" ArgList<{func}> ")"
+    {{ return func; }}
+  ;
 
 
   Func <{Func*}> =
@@ -370,6 +390,18 @@ const char* wlangGrammarStr = R"STR(
     }}
     ")"
   |
+    {{
+      IntermediateExpression intermediateExpression;
+      result.emplace_back(Op::Type::Subscript, peek().source);
+      SourceRange openBracket = peek().source;
+    }}
+    "[" Expression<{intermediateExpression}> "]"
+    {{
+      SourceRange closeBracket = peek().source;
+      Expression* index = resolveIntermediateExpression(std::move(intermediateExpression));
+      result.emplace_back(index, SourceRange(openBracket.start, closeBracket.end));
+    }}
+  |
     Nil;
 
 
@@ -410,7 +442,8 @@ const char* wlangGrammarStr = R"STR(
     Arg
     {{
       func->args.emplace_back(v0);
-      func->argsScope->variables.insert_or_assign(v0->name, Scope::Item<VariableDeclaration*>{.item = v0, .chunk = &ast});
+      if (func->argsScope)
+        func->argsScope->variables.insert_or_assign(v0->name, Scope::Item<VariableDeclaration*>{.item = v0, .chunk = &ast});
     }}
     ArgList'<{func}>
   |

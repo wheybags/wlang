@@ -6,6 +6,7 @@
 const std::vector<std::pair<std::string_view, Token::Type>> keywordMapping
 {
   {"return", Token::Type::Return},
+  {"extern", Token::Type::Extern},
   {"class",  Token::Type::Class},
   {"false",  Token::Type::False},
   {"else",   Token::Type::Else},
@@ -23,6 +24,8 @@ const std::vector<std::pair<std::string_view, Token::Type>> tokenMapping
   {",", Token::Type::Comma},
   {"(", Token::Type::OpenBracket},
   {")", Token::Type::CloseBracket},
+  {"[", Token::Type::OpenSquareBracket},
+  {"]", Token::Type::CloseSquareBracket},
   {"{", Token::Type::OpenBrace},
   {"}", Token::Type::CloseBrace},
   {";", Token::Type::Semicolon},

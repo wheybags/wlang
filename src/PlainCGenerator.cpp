@@ -19,6 +19,9 @@ std::string PlainCGenerator::output()
 
   std::function<void(const Type*)> evalType = [&](const Type* type) -> void
   {
+    if (type->builtin)
+      return;
+
     release_assert(!seenThisIteration.contains(type)); // circular reference!
 
     bool wasSeen = seen.contains(type);
@@ -29,6 +32,9 @@ std::string PlainCGenerator::output()
     {
       for (const VariableDeclaration* member: type->typeClass->memberVariables)
       {
+        if (type->builtin)
+          continue;
+
         if (member->type.pointerDepth == 0)
         {
           evalType(member->type.id.resolved.type());
@@ -105,6 +111,9 @@ std::string PlainCGenerator::getPrototype(const Func* node)
 
 void PlainCGenerator::generate(const Func* node)
 {
+  if (node->external)
+    return;
+
   std::string prototype = getPrototype(node);
 
   functionBodies.appendLine(prototype);
@@ -374,7 +383,7 @@ std::string PlainCGenerator::generate(const Expression* node)
         case Op::Type::Call:
         {
           const Op::Call& call = opNode->args.call();
-          str += "(";
+          str += "((";
           str += generate(call.callable);
           str += ")(";
           for (int32_t i = 0; i < int32_t(call.callArgs.size()); i++)
@@ -383,7 +392,18 @@ std::string PlainCGenerator::generate(const Expression* node)
             if (i != int32_t(call.callArgs.size()) - 1)
               str += ", ";
           }
+          str += "))";
+          break;
+        }
+        case Op::Type::Subscript:
+        {
+          const Op::Subscript& subscript = opNode->args.subscript();
+          str += "((";
+          str += generate(subscript.item);
           str += ")";
+          str += "[";
+          str += generate(subscript.index);
+          str += "])";
           break;
         }
         case Op::Type::ENUM_END:
@@ -451,6 +471,9 @@ std::string PlainCGenerator::strType(const TypeRef& type)
 
 void PlainCGenerator::referenceType(const TypeRef& typeRef)
 {
+  if (typeRef.id.resolved.type()->builtin)
+    return;
+
   if (typeRef.pointerDepth > 0)
     this->usedTypesByRef.emplace(typeRef.id.resolved.type());
   else

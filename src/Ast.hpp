@@ -119,6 +119,9 @@ struct Func
   TypeRef returnType;
   std::string name;
   std::vector<VariableDeclaration*> args;
+  bool external = false; // this is an extern function declaration, will be linked in from a non-wlang shared object
+
+  // not set if external is true
   Scope* argsScope = nullptr;
   Block* funcBody = nullptr;
 };
@@ -166,6 +169,7 @@ struct Op
     LogicalNot,
     UnaryMinus,
     Call,
+    Subscript,
     Add,
     Subtract,
     Multiply,
@@ -191,6 +195,12 @@ struct Op
     std::vector<Expression*> callArgs;
   };
 
+  struct Subscript
+  {
+    Expression* item = nullptr;
+    Expression* index = nullptr;
+  };
+
   struct MemberAccess
   {
     Expression* expression = nullptr;
@@ -201,6 +211,7 @@ struct Op
     XX(binary, Binary, Binary) \
     XX(unary, Unary, Unary) \
     XX(call, Call, Call) \
+    XX(subscript, Subscript, Subscript) \
     XX(memberAccess, MemberAccess, MemberAccess)
   #define CLASS_NAME Args
   #include "CreateTaggedUnion.hpp"

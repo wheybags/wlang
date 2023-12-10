@@ -121,6 +121,23 @@ Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& inter
         i -= 2;
         break;
       }
+      case Op::Type::Subscript:
+      {
+        Op::Subscript subscript;
+        subscript.item = intermediate[i-1].val.expression();
+        subscript.index = intermediate[i+1].val.expression();
+        intermediate.erase(intermediate.begin() + i, intermediate.begin() + (i+2));
+
+        opNode->type = op;
+        Expression* expression = makeNode<Expression>();
+        expression->val = opNode;
+        expression->source = SourceRange(subscript.item->source.start, subscript.index->source.end);
+        opNode->args = subscript;
+
+        intermediate[i-1] = IntermediateExpressionItem(expression, expression->source);
+        i -= 2;
+        break;
+      }
       case Op::Type::LogicalNot:
       case Op::Type::UnaryMinus:
       {
@@ -184,7 +201,7 @@ Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& inter
     if (!intermediate[i].val.isOp())
       continue;
     Op::Type op = intermediate[i].val.op();
-    if (op == Op::Type::Call || op == Op::Type::MemberAccess)
+    if (op == Op::Type::Call || op == Op::Type::MemberAccess || op == Op::Type::Subscript)
       outputOp(op, i);
   }
 
