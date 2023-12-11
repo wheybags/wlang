@@ -31,6 +31,7 @@ private:
   std::unordered_set<const Type*> usedTypesByValue;
   std::unordered_set<const Func*> usedFunctions;
   OutputString functionBodies;
+  HashMap<std::string> stringConstants;
 };
 
 

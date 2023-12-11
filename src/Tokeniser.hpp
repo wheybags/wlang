@@ -40,6 +40,7 @@ struct Token
   {
     Id,
     IntegerToken,
+    String,
     Comma,
     OpenBracket,
     CloseBracket,
@@ -72,6 +73,7 @@ struct Token
   Type type = {};
   std::string idValue = {};
   IntegerToken integerValue;
+  std::string stringValue;
 
   SourceRange source;
 };

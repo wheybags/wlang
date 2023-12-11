@@ -33,5 +33,7 @@ public:
 
 private:
   HashMap<std::unique_ptr<AstChunk>> chunks;
+
+public:
   Scope linkScope;
 };

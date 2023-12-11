@@ -32,6 +32,7 @@ public:
   Expression* resolveIntermediateExpression(IntermediateExpression&& intermediate);
   std::string parseId();
   IntegerToken parseIntegerToken();
+  std::string parseString();
 
   #include "ParserRulesDeclarations.inl"
 
@@ -297,6 +298,12 @@ IntegerToken Parser::parseIntegerToken()
 {
   release_assert(peek().type == Token::Type::IntegerToken);
   return pop().integerValue;
+}
+
+std::string Parser::parseString()
+{
+  release_assert(peek().type == Token::Type::String);
+  return pop().stringValue;
 }
 
 #include "ParserRules.inl"

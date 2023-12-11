@@ -75,12 +75,18 @@ struct IntegerConstant
   Type* getType() const;
 };
 
+struct StringConstant
+{
+  std::string val;
+};
+
 class Expression
 {
 public:
   #define FOR_EACH_TAGGED_UNION_TYPE(XX) \
     XX(id, Id, ScopeId) \
     XX(integerConstant, IntegerConstant, IntegerConstant) \
+    XX(stringConstant, StringConstant, StringConstant) \
     XX(boolean, Bool, bool ) \
     XX(op, Op, Op*)
   #define CLASS_NAME Val

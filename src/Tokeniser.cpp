@@ -63,11 +63,13 @@ std::vector<Token> tokenise(std::string_view input)
     Id,
     Integer,
     Comment,
+    String,
     None,
   };
 
   Type accumulatorType = Type::None;
   int32_t integerSize = -1;
+  bool escaped = false;
   int32_t accumulatorStartY = -1;
   int32_t accumulatorStartX = -1;
   std::string accumulator;
@@ -88,8 +90,11 @@ std::vector<Token> tokenise(std::string_view input)
       tokens.emplace_back(Token{.type = Token::Type::Id, .idValue = accumulator, .source = source});
     else if (accumulatorType == Type::Integer)
       tokens.emplace_back(Token{.type = Token::Type::IntegerToken, .integerValue = {.val = *parseInteger(accumulator), .size = integerSize}, .source = source});
+    else if (accumulatorType == Type::String)
+      tokens.emplace_back(Token{.type = Token::Type::String, .stringValue = accumulator, .source = source});
 
     accumulator.clear();
+    accumulatorType = Type::None;
   };
 
   auto accumulate = [&](char c)
@@ -127,6 +132,31 @@ std::vector<Token> tokenise(std::string_view input)
       if (input[0] == '\n')
         accumulatorType = Type::None;
 
+      advance(1);
+      continue;
+    }
+
+    if (accumulatorType == Type::String)
+    {
+      if (escaped)
+      {
+        escaped = false;
+      }
+      else
+      {
+        if (input[0] == '"')
+        {
+          accumulator += '"';
+          advance(1);
+          breakToken();
+          continue;
+        }
+
+        if (input[0] == '\\')
+          escaped = true;
+      }
+
+      accumulator += input[0];
       advance(1);
       continue;
     }
@@ -197,6 +227,13 @@ std::vector<Token> tokenise(std::string_view input)
         integerSize = 32; // default
         advance(1);
         continue;
+      }
+      else if (input[0] == '"')
+      {
+        accumulate(input[0]);
+        accumulatorType = Type::String;
+        escaped = false;
+        advance(1);
       }
       else
       {

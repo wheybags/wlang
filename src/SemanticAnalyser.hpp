@@ -34,4 +34,5 @@ private:
 
 private:
   std::vector<Scope*> scopeStack;
+  Scope* linkScope = nullptr;
 };

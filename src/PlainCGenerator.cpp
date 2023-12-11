@@ -67,7 +67,15 @@ std::string PlainCGenerator::output()
   for (const Func* function : this->usedFunctions)
     declarations.appendLine(this->getPrototype(function) + ";");
 
-  return declarations.str + functionBodies.str;
+  OutputString stringConstantsOutput;
+  for (const auto& pair : this->stringConstants)
+  {
+    std::string charArrayName = pair.second + "_charArray";
+    stringConstantsOutput.appendLine("static const char " + charArrayName + "[] = " + pair.first + ";");
+    stringConstantsOutput.appendLine("static struct string " + pair.second + " = { .data = (char*)" + charArrayName + ", .length = sizeof(" + charArrayName + ") - 1 };");
+  }
+
+  return declarations.str + stringConstantsOutput.str + functionBodies.str;
 }
 
 void PlainCGenerator::generate(const Root *root)
@@ -255,6 +263,16 @@ std::string PlainCGenerator::generate(const Expression* node)
         default:
           message_and_abort("bad integer size");
       }
+      break;
+    }
+
+    case Expression::Val::Tag::StringConstant:
+    {
+      const std::string& string = node->val.stringConstant().val;
+      auto it = this->stringConstants.find(string);
+      if (it == this->stringConstants.end())
+        it = this->stringConstants.insert_or_assign(string, "str_" + std::to_string(this->stringConstants.size())).first;
+      str += it->second;
       break;
     }
 

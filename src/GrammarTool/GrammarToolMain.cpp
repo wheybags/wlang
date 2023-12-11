@@ -324,6 +324,14 @@ const char* wlangGrammarStr = R"STR(
       result.emplace_back(expression, expression->source);
     }} Expression'<{result}>
   |
+    $String
+    {{
+      Expression* expression = makeNode<Expression>();
+      expression->val = StringConstant { .val = v0 };
+      expression->source = source;
+      result.emplace_back(expression, expression->source);
+    }}
+  |
     "false"
     {{
       Expression* expression = makeNode<Expression>();

@@ -5,6 +5,8 @@
 
 void SemanticAnalyser::run(MergedAst& ast)
 {
+  this->linkScope = &ast.linkScope;
+
   for (AstChunk* chunk : ast)
     resolveScopeIds(chunk->root);
 
@@ -99,6 +101,12 @@ void SemanticAnalyser::run(Expression* expression)
     case Expression::Val::Tag::IntegerConstant:
     {
       expression->type = expression->val.integerConstant().getType()->reference();
+      break;
+    }
+
+    case Expression::Val::Tag::StringConstant:
+    {
+      expression->type = this->linkScope->types.at("string").item->reference();
       break;
     }
 
@@ -350,6 +358,7 @@ void SemanticAnalyser::resolveScopeIds(Expression* expression)
 
     case Expression::Val::Tag::IntegerConstant:
     case Expression::Val::Tag::Bool:
+    case Expression::Val::Tag::StringConstant:
       break;
 
     case Expression::Val::Tag::Op:

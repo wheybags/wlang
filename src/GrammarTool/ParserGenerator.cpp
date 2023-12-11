@@ -83,6 +83,7 @@ ParserSource generateParser(const Grammar& grammar)
   {
     {"$Id", "Id"},
     {"$IntegerToken", "IntegerToken"},
+    {"$String", "String"},
     {"\",\"", "Comma"},
     {"\"(\"", "OpenBracket"},
     {"\")\"", "CloseBracket"},
@@ -116,6 +117,7 @@ ParserSource generateParser(const Grammar& grammar)
   {
     {"$Id", "std::string"},
     {"$IntegerToken", "IntegerToken"},
+    {"$String", "std::string"},
   };
 
   auto sanitiseName = [](const std::string& ruleName)
