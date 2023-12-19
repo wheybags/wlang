@@ -12,8 +12,9 @@ fs::path getPathToThisExecutable()
   buff.resize(8192);
   GetModuleFileNameW(nullptr, buff.data(), DWORD(buff.size()));
   return buff.data();
-#else
-# error "implement me"
+#elif __APPLE__
+  // TODO: fix this when I have a search engine
+  return "/Users/wheybags/wlang";
 #endif
 }
 

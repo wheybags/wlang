@@ -9,7 +9,7 @@ struct SourceLocation
   int32_t x = -1;
 
   SourceLocation() = default;
-  SourceLocation(int32_t x, int32_t y) : x(x), y(y) {}
+  SourceLocation(int32_t x, int32_t y) : y(y), x(x) {}
 
   bool operator>(SourceLocation other) const { return std::make_pair(y, x) > std::make_pair(other.y, other.x); }
   bool operator>=(SourceLocation other) const { return std::make_pair(y, x) >= std::make_pair(other.y, other.x); }

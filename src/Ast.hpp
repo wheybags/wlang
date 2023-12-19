@@ -53,8 +53,8 @@ struct TypeRef
   ScopeId id;
   int32_t pointerDepth = 0;
 
-  bool operator==(TypeRef& other);
-  bool operator!=(TypeRef& other);
+  bool operator==(const TypeRef& other) const;
+  bool operator!=(const TypeRef& other) const;
 };
 
 struct Type

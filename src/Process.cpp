@@ -1,4 +1,5 @@
 #include "Process.hpp"
+#include "Common/Assert.hpp"
 
 #ifdef WIN32
 #include <windows.h>
@@ -185,5 +186,17 @@ done:
   return retval;
 }
 #else
-#error "implement me!"
+#include <unistd.h>
+bool runProcess(const std::vector<std::string>& args, std::string& output, int32_t& exitCode, void* environmentPtr)
+{
+  release_assert(!environmentPtr);
+
+  // TODO: replace when I have internet
+  std::string command;
+  for (const std::string& item: args)
+    command += "\"" + item + "\" ";
+
+  exitCode = system(command.c_str());
+  return true;
+}
 #endif

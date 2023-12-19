@@ -2,6 +2,7 @@
 #include <cstdio>
 #include <cstdlib>
 #include <cstdarg>
+#include <string>
 
 #ifdef _MSC_VER
 #define DEBUG_BREAK __debugbreak()

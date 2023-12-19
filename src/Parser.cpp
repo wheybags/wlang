@@ -24,6 +24,8 @@ public:
     #define CLASS_NAME Val
     #include "CreateTaggedUnion.hpp"
 
+    IntermediateExpressionItem(Val val, SourceRange source) : val(std::move(val)), source(std::move(source)) {}
+
     Val val;
     SourceRange source;
   };

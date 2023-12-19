@@ -7,6 +7,7 @@
 #include "Process.hpp"
 #include "CCompiler.hpp"
 #include "CCompilerMSVC.hpp"
+#include "CCompilerClang.hpp"
 
 int WLangMain(int argc, char** argv)
 {
@@ -58,7 +59,13 @@ int WLangMain(int argc, char** argv)
   std::error_code _;
   fs::create_directories(buildDirectory, _);
 
-  std::unique_ptr<CCompiler> cCompiler = std::unique_ptr<CCompiler>(new CCompilerMSVC());
+  std::unique_ptr<CCompiler> cCompiler = std::unique_ptr<CCompiler>(
+#if WIN32
+    new CCompilerMSVC()
+#else
+    new CCompilerClang()
+#endif
+    );
   std::vector<fs::path> objects;
 
   for (const AstChunk* chunk : mergedAst)
@@ -77,7 +84,11 @@ int WLangMain(int argc, char** argv)
     }
   }
 
-  cCompiler->linkExecutable(objects, buildDirectory / "main.exe");
+  std::string exeFilename = "main";
+#if WIN32
+  exeFilename += ".exe";
+#endif
+  cCompiler->linkExecutable(objects, buildDirectory / exeFilename);
 
   return 0;
 }

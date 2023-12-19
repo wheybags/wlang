@@ -1,4 +1,3 @@
-#pragma once
 #include "SemanticAnalyser.hpp"
 #include "BuiltinTypes.hpp"
 #include "MergedAst.hpp"

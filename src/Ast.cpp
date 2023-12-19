@@ -41,7 +41,7 @@ template VariableDeclaration* Scope::lookup<VariableDeclaration>(ScopeId& name);
 template Type* Scope::lookup<Type>(ScopeId& name);
 
 
-bool TypeRef::operator==(TypeRef& other)
+bool TypeRef::operator==(const TypeRef& other) const
 {
   if (pointerDepth != other.pointerDepth)
     return false;
@@ -60,7 +60,7 @@ bool TypeRef::operator==(TypeRef& other)
   return false;
 }
 
-bool TypeRef::operator!=(TypeRef& other)
+bool TypeRef::operator!=(const TypeRef& other) const
 {
   return !(*this == other);
 }
