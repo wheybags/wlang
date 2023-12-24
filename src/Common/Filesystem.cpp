@@ -5,6 +5,10 @@
 #include <windows.h>
 #endif
 
+#ifdef __APPLE__
+#include <mach-o/dyld.h>
+#endif
+
 fs::path getPathToThisExecutable()
 {
 #ifdef WIN32
@@ -13,8 +17,20 @@ fs::path getPathToThisExecutable()
   GetModuleFileNameW(nullptr, buff.data(), DWORD(buff.size()));
   return buff.data();
 #elif __APPLE__
-  // TODO: fix this when I have a search engine
-  return "/Users/wheybags/wlang";
+  std::string temp;
+  temp.resize(4096);
+
+  while (true)
+  {
+    uint32_t bufSize = uint32_t(temp.size());
+    if (_NSGetExecutablePath(temp.data(), &bufSize) == 0)
+      break;
+    temp.resize(std::max(bufSize, uint32_t(temp.size()) * 2U));
+  }
+
+  temp.resize(strlen(temp.data()));
+
+  return temp;
 #endif
 }
 

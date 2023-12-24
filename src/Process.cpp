@@ -187,16 +187,116 @@ done:
 }
 #else
 #include <unistd.h>
+#include <sys/wait.h>
+#include "UnixWrap.hpp"
+
+enum PIPE_FILE_DESCRIPTORS
+{
+  READ_FD  = 0,
+  WRITE_FD = 1
+};
+
+
 bool runProcess(const std::vector<std::string>& args, std::string& output, int32_t& exitCode, void* environmentPtr)
 {
   release_assert(!environmentPtr);
 
-  // TODO: replace when I have internet
-  std::string command;
-  for (const std::string& item: args)
-    command += "\"" + item + "\" ";
+  // adapted from: https://stackoverflow.com/a/479103
 
-  exitCode = system(command.c_str());
-  return true;
+  std::vector<const char*> argvArray;
+  {
+    argvArray.reserve(args.size());
+    for (const std::string& arg: args)
+      argvArray.emplace_back(arg.data());
+    argvArray.emplace_back(nullptr);
+  }
+
+  constexpr int bufferSize = 256;
+  char buffer[bufferSize + 1];
+
+  int parentToChild[2];
+  release_assert(pipe(parentToChild) == 0);
+
+  int childToParent[2];
+  release_assert(pipe(childToParent) == 0);
+
+  int errPipe[2];
+  release_assert(pipe(errPipe) == 0);
+
+  pid_t pid = fork();
+  release_assert(pid != -1);
+
+  // child
+  if (pid == 0)
+  {
+    if (w_dup2(parentToChild[READ_FD ], STDIN_FILENO ) == -1) goto childError;
+    if (w_dup2(childToParent[WRITE_FD], STDOUT_FILENO) == -1) goto childError;
+    if (w_dup2(childToParent[WRITE_FD], STDERR_FILENO) == -1) goto childError;
+
+    // unused
+    if (w_close(parentToChild[WRITE_FD]) != 0) goto childError;
+    if (w_close(childToParent[READ_FD ]) != 0) goto childError;
+    if (w_close(errPipe[READ_FD]) != 0) goto childError;
+
+    execvp(argvArray[0], (char* const*)argvArray.data());
+
+childError:
+    char err = 1;
+    w_write(errPipe[WRITE_FD], &err, 1);
+
+    w_close(errPipe[WRITE_FD]);
+    w_close(parentToChild[READ_FD]);
+    w_close(childToParent[WRITE_FD]);
+
+    exit(0);
+  }
+  else // parent
+  {
+    // unused
+    release_assert(w_close(parentToChild[READ_FD]) == 0);
+    release_assert(w_close(childToParent[WRITE_FD]) == 0);
+    release_assert(w_close(errPipe[WRITE_FD]) == 0);
+
+    output.resize(0);
+
+    while (true)
+    {
+      ssize_t bytesRead = w_read(childToParent[READ_FD], buffer, bufferSize);
+      release_assert(bytesRead >= 0);
+
+      if (bytesRead == 0) // End-of-File, or non-blocking read.
+      {
+        int status = 0;
+
+        while (true)
+        {
+          int ret = waitpid(pid, &status, 0);
+          if (ret == pid)
+            break;
+          release_assert(ret == -1 && errno == EINTR);
+        }
+
+        // done with these now
+        release_assert(w_close(parentToChild[WRITE_FD]) == 0);
+        release_assert(w_close(childToParent[READ_FD]) == 0);
+
+        char errChar = 0;
+        release_assert(w_read(errPipe[READ_FD], &errChar, 1) >= 0);
+        w_close(errPipe[READ_FD]);
+
+        if (errChar)
+          return false;
+
+        exitCode = WEXITSTATUS(status);
+        return true;
+      }
+      else
+      {
+        size_t oldSize = output.size();
+        output.resize(output.size() + bytesRead);
+        memcpy(output.data() + oldSize, buffer, bytesRead);
+      }
+    }
+  }
 }
 #endif
