@@ -302,6 +302,10 @@ Grammar::Grammar(const std::string& str_table)
   GrammarResult result = make_grammar(str_table);
   this->rules = std::move(result.rules);
   this->keys = std::move(result.keys);
+
+  release_assert(this->rules.size() == this->keys.size());
+  for (const std::string& key : this->keys)
+    this->can_be_nil(key);
 }
 
 bool Grammar::can_be_nil(const std::string& name) const

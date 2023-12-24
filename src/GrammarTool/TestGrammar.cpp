@@ -155,7 +155,7 @@ void testCodeInsert()
   {
     Grammar rules(R"STR(
       Root<{Root*}> = {{test code;}} FuncList $End;
-      FuncList<{std::vector<Func*>}> = Func FuncList';
+      FuncList<{std::vector<Func*>}> = "A";
     )STR");
 
     release_assert(rules.getRules().at("Root").productions[0][0].codeInsertBefore == "test code;");
@@ -172,7 +172,7 @@ void testCodeInsert()
   {
     Grammar rules(R"STR(
       Root<{Root*}> = FuncList {{test code;}} "b" $End;
-      FuncList<{std::vector<Func*>}> = Func FuncList';
+      FuncList<{std::vector<Func*>}> = "A";
     )STR");
 
     release_assert(rules.getRules().at("Root").productions[0][0].codeInsertBefore.empty());
@@ -191,7 +191,7 @@ void testCodeInsert()
   {
     Grammar rules(R"STR(
       Root<{Root*}> = FuncList $End;
-      FuncList<{std::vector<Func*>}> = Func FuncList'  {{test code;}};
+      FuncList<{std::vector<Func*>}> = "A" "B"  {{test code;}};
     )STR");
 
     release_assert(rules.getRules().at("Root").productions[0][0].codeInsertBefore.empty());
