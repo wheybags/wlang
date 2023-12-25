@@ -156,9 +156,28 @@ void SemanticAnalyser::run(Expression* expression)
         case Op::Type::Call:
         {
           Op::Call& callData = op->args.call();
-          Func* function = callData.callable->val.id().resolved.function();
 
-          release_assert(callData.callArgs.size() == function->args.size());
+          Func* function = nullptr;
+          if (callData.callable->val.isId())
+          {
+            function = callData.callable->val.id().resolved.function();
+            release_assert(callData.callArgs.size() == function->args.size());
+          }
+          else
+          {
+            release_assert(callData.callable->val.isOp());
+            Op* callOp = callData.callable->val.op();
+            release_assert(callOp->type == Op::Type::MemberAccess);
+            Expression* object = callOp->args.memberAccess().expression;
+            run(object);
+
+            release_assert(object->type.id.resolved.type()->typeClass);
+            callOp->args.memberAccess().member.resolveFunction(*object->type.id.resolved.type()->typeClass->memberScope);
+
+            function = callOp->args.memberAccess().member.resolved.function();
+            release_assert(callData.callArgs.size() + 1 == function->args.size());
+          }
+
           for (int32_t i = 0; i < int32_t(callData.callArgs.size()); i++)
           {
             run(callData.callArgs[i]);
@@ -390,9 +409,18 @@ void SemanticAnalyser::resolveScopeIds(Expression* expression)
         case Op::Type::Call:
         {
           Op::Call& call = op->args.call();
-          release_assert(call.callable->val.isId()); // TODO: this doesn't belong here. Fix when implementing function pointers
-          call.callable->val.id().resolveFunction(*scopeStack.back());
-          release_assert(call.callable->val.id().resolved.function());
+          if (call.callable->val.isId())
+          {
+            call.callable->val.id().resolveFunction(*scopeStack.back());
+            release_assert(call.callable->val.id().resolved.function());
+          }
+          else
+          {
+            release_assert(call.callable->val.isOp() && call.callable->val.op()->type == Op::Type::MemberAccess);
+            resolveScopeIds(call.callable->val.op()->args.memberAccess().expression);
+            // Cannot resolve the member function name yet, see case Op::Type::MemberAccess below
+          }
+
           for (int32_t i = 0; i < int32_t(call.callArgs.size()); i++)
             resolveScopeIds(call.callArgs[i]);
           break;

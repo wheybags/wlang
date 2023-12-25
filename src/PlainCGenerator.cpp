@@ -371,7 +371,9 @@ std::string PlainCGenerator::generate(const Expression* node)
         case Op::Type::MemberAccess:
         {
           const Op::MemberAccess& memberAccess = opNode->args.memberAccess();
-          this->referenceType(memberAccess.expression->type);
+          TypeRef parentType = memberAccess.expression->type;
+          parentType.pointerDepth--;
+          this->referenceType(parentType);
           str += "(";
           str += generate(memberAccess.expression);
 
@@ -401,16 +403,41 @@ std::string PlainCGenerator::generate(const Expression* node)
         case Op::Type::Call:
         {
           const Op::Call& call = opNode->args.call();
-          str += "((";
-          str += generate(call.callable);
-          str += ")(";
-          for (int32_t i = 0; i < int32_t(call.callArgs.size()); i++)
+          if (call.callable->val.isId())
           {
-            str += generate(call.callArgs[i]);
-            if (i != int32_t(call.callArgs.size()) - 1)
-              str += ", ";
+            str += "((";
+            str += generate(call.callable);
+            str += ")(";
+            for (int32_t i = 0; i < int32_t(call.callArgs.size()); i++)
+            {
+              str += generate(call.callArgs[i]);
+              if (i != int32_t(call.callArgs.size()) - 1)
+                str += ", ";
+            }
+            str += "))";
           }
-          str += "))";
+          else
+          {
+            // is member call
+            const Op* callOp = call.callable->val.op();
+            this->referenceFunction(callOp->args.memberAccess().member.resolved.function());
+
+            str += "("+ callOp->args.memberAccess().member.str + "(";
+
+            if (callOp->args.memberAccess().expression->type.pointerDepth == 0)
+              str += "&";
+            str += "(" + generate(callOp->args.memberAccess().expression) + ")";
+
+            if (!call.callArgs.empty())
+              str += ", ";
+            for (int32_t i = 0; i < int32_t(call.callArgs.size()); i++)
+            {
+              str += generate(call.callArgs[i]);
+              if (i != int32_t(call.callArgs.size()) - 1)
+                str += ", ";
+            }
+            str += "))";
+          }
           break;
         }
         case Op::Type::Subscript:

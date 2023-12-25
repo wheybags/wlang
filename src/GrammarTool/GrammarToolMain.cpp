@@ -47,23 +47,34 @@ const char* wlangGrammarStr = R"STR(
       funcList->classes.emplace_back(newClass);
       funcList->scope->types.insert_or_assign(type->name, Scope::Item<Type*>{.item = type, .chunk = &ast});
     }}
-    "{" ClassMemberList<{newClass}> "}"
+    "{" ClassMemberList<{newClass, funcList}> "}"
     FuncList'<{funcList}>
   ;
 
-  ClassMemberList <{void}> <{Class* newClass}> =
-    Type $Id TheRestOfADeclaration
+  ClassMemberList <{void}> <{Class* newClass, FuncList* funcList}> =
+    Type $Id
+    ClassMemberVariable<{v0, v1, newClass, funcList}>
+    ClassMemberList<{newClass, funcList}>
+  |
+    Nil
+  ;
+
+  ClassMemberVariable <{void}> <{TypeRef& type, const std::string& id, Class* newClass, FuncList* funcList}> =
+    TheRestOfADeclaration ";"
     {{
       VariableDeclaration* variableDeclaration = makeNode<VariableDeclaration>();
-      variableDeclaration->type = v0;
-      variableDeclaration->name = v1;
-      variableDeclaration->initialiser = v2;
+      variableDeclaration->type = type;
+      variableDeclaration->name = id;
+      variableDeclaration->initialiser = v0;
       newClass->memberVariables.push_back(variableDeclaration);
       newClass->memberScope->variables.emplace(variableDeclaration->name, Scope::Item<VariableDeclaration*>{.item = variableDeclaration, .chunk = &ast});
     }}
-    ";" ClassMemberList<{newClass}>
   |
-    Nil
+    Func'<{type, id}>
+    {{
+      funcList->functions.emplace_back(v0);
+      newClass->memberScope->functions.insert_or_assign(v0->name, Scope::Item<Func*>{.item = v0, .chunk = &ast});
+    }}
   ;
 
   FuncList' <{void}> <{FuncList* funcList}> =
@@ -84,16 +95,21 @@ const char* wlangGrammarStr = R"STR(
 
 
   Func <{Func*}> =
-    Type $Id
+    Type $Id Func'<{v0, v1}>
+    {{ return v2; }}
+  ;
+
+
+  Func' <{Func*}> <{TypeRef& type, const std::string& id}> =
     {{
       Func* func = makeNode<Func>();
       func->argsScope = makeNode<Scope>();
-      func->returnType = v0;
-      func->name = std::move(v1);
+      func->returnType = type;
+      func->name = id;
     }}
     "(" ArgList<{func}> ")" Block
     {{
-      func->funcBody = v2;
+      func->funcBody = v0;
       func->funcBody->scope->parent2 = func->argsScope;
       return func;
     }}
@@ -527,6 +543,15 @@ void dumpFirstFollows(Grammar& grammar)
 
     puts(line.c_str());
   }
+
+  printf("\nCan be Nil:\n");
+  for (const std::string& name : grammar.getKeys())
+  {
+    std::string line = "    " + name + " " + pad(name) + "= ";
+    line += grammar.can_be_nil(name) ? "true" : "false";
+    puts(line.c_str());
+  }
+
 }
 
 int main()

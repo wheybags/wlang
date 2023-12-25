@@ -83,5 +83,9 @@ i32 main()
 
   printString("hello w.");
 
+  string str;
+  str = "ASD";
+  str.size();
+
   return 0;
 }

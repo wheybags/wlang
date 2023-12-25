@@ -2,6 +2,8 @@ class string
 {
   i8* data;
   i64 length;
+
+  i64 size(string* this) { return this.length; }
 }
 
 extern i32 puts(i8* str);
