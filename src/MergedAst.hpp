@@ -36,4 +36,5 @@ private:
 
 public:
   Scope linkScope;
+  HashSet usedMangledNames;
 };

@@ -75,8 +75,8 @@ int WLangMain(int argc, char** argv)
       PlainCGenerator generator;
       generator.generate(function);
       std::string output = generator.output();
-      fs::path outputCFile = buildDirectory / (function->name + ".c");
-      fs::path outputObjFile = buildDirectory / (function->name + ".o");
+      fs::path outputCFile = buildDirectory / (function->mangledName + ".c");
+      fs::path outputObjFile = buildDirectory / (function->mangledName + ".o");
       release_assert(overwriteFileWithString(outputCFile, output));
 
       cCompiler->compile(outputCFile, outputObjFile);

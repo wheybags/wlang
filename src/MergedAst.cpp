@@ -32,6 +32,19 @@ void MergedAst::link(AstChunk* chunk)
     this->linkScope.functions.insert(item);
   chunkScope->functions.clear();
 
+  for (Func* function : chunk->root->funcList->functions)
+  {
+    std::string name = function->name;
+
+    if (function->memberClass)
+      name = function->memberClass->type->name + "_" + function->name;
+
+    release_assert(!this->usedMangledNames.contains(name));
+
+    this->usedMangledNames.insert(name);
+    function->mangledName = std::move(name);
+  }
+
   chunkScope->parent = &this->linkScope;
 }
 
@@ -57,7 +70,10 @@ void MergedAst::tryRemoveChunk(std::string_view path)
 
   removeChunkPart(chunk, this->linkScope.types);
   removeChunkPart(chunk, this->linkScope.variables);
-  removeChunkPart(chunk, this->linkScope.functions);
+  removeChunkPart(chunk, this->linkScope.variables);
+
+  for (Func* function : chunk->root->funcList->functions)
+    this->usedMangledNames.erase(function->mangledName);
 
   this->chunks.erase(it);
 }

@@ -124,8 +124,10 @@ struct Func
 {
   TypeRef returnType;
   std::string name;
+  std::string mangledName;
   std::vector<VariableDeclaration*> args;
   bool external = false; // this is an extern function declaration, will be linked in from a non-wlang shared object
+  Class* memberClass = nullptr; // if this function is a member of a class, this will be set
 
   // not set if external is true
   Scope* argsScope = nullptr;

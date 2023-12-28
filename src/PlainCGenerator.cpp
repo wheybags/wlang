@@ -100,7 +100,7 @@ void PlainCGenerator::generate(const FuncList* node)
 
 std::string PlainCGenerator::getPrototype(const Func* node)
 {
-  std::string prototype= strType(node->returnType) + " " + node->name + "(";
+  std::string prototype= strType(node->returnType) + " " + node->mangledName + "(";
 
   for (VariableDeclaration* var : node->args)
   {
@@ -236,9 +236,6 @@ std::string PlainCGenerator::generate(const Expression* node)
     case Expression::Val::Tag::Id:
     {
       const ScopeId& scopeId = node->val.id();
-      if (scopeId.resolved.isFunction())
-        this->referenceFunction(scopeId.resolved.function());
-
       str += scopeId.str;
       break;
     }
@@ -405,8 +402,10 @@ std::string PlainCGenerator::generate(const Expression* node)
           const Op::Call& call = opNode->args.call();
           if (call.callable->val.isId())
           {
+            const Func* function = call.callable->val.id().resolved.function();
+            this->referenceFunction(function);
             str += "((";
-            str += generate(call.callable);
+            str += function->mangledName;
             str += ")(";
             for (int32_t i = 0; i < int32_t(call.callArgs.size()); i++)
             {
@@ -422,7 +421,7 @@ std::string PlainCGenerator::generate(const Expression* node)
             const Op* callOp = call.callable->val.op();
             this->referenceFunction(callOp->args.memberAccess().member.resolved.function());
 
-            str += "("+ callOp->args.memberAccess().member.str + "(";
+            str += "("+ callOp->args.memberAccess().member.resolved.function()->mangledName + "(";
 
             if (callOp->args.memberAccess().expression->type.pointerDepth == 0)
               str += "&";

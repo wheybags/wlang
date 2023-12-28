@@ -53,13 +53,13 @@ const char* wlangGrammarStr = R"STR(
 
   ClassMemberList <{void}> <{Class* newClass, FuncList* funcList}> =
     Type $Id
-    ClassMemberVariable<{v0, v1, newClass, funcList}>
+    ClassMember<{v0, v1, newClass, funcList}>
     ClassMemberList<{newClass, funcList}>
   |
     Nil
   ;
 
-  ClassMemberVariable <{void}> <{TypeRef& type, const std::string& id, Class* newClass, FuncList* funcList}> =
+  ClassMember <{void}> <{TypeRef& type, const std::string& id, Class* newClass, FuncList* funcList}> =
     TheRestOfADeclaration ";"
     {{
       VariableDeclaration* variableDeclaration = makeNode<VariableDeclaration>();
@@ -74,6 +74,7 @@ const char* wlangGrammarStr = R"STR(
     {{
       funcList->functions.emplace_back(v0);
       newClass->memberScope->functions.insert_or_assign(v0->name, Scope::Item<Func*>{.item = v0, .chunk = &ast});
+      v0->memberClass = newClass;
     }}
   ;
 

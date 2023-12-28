@@ -1,5 +1,6 @@
 #include <string>
 #include <unordered_map>
+#include <unordered_set>
 
 struct string_hash
 {
@@ -15,3 +16,6 @@ struct string_hash
 // just an unordered_map<std::string, T> that allows lookup by std::string_view without creating a temporary std::string
 template<typename T>
 using HashMap = std::unordered_map<std::string, T, string_hash, std::equal_to<>>;
+
+// same for set
+using HashSet = std::unordered_set<std::string, string_hash, std::equal_to<>>;
