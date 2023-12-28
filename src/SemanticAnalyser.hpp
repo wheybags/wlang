@@ -32,6 +32,8 @@ private:
   void resolveScopeIds(ReturnStatement* returnStatement);
   void resolveScopeIds(TypeRef& typeRef);
 
+  bool canAssign(const TypeRef& source, const TypeRef& destination);
+
 private:
   std::vector<Scope*> scopeStack;
   Scope* linkScope = nullptr;

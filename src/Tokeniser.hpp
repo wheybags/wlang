@@ -67,6 +67,7 @@ struct Token
     True,
     False,
     Extern,
+    Null,
     End
   };
 

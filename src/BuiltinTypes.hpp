@@ -8,6 +8,7 @@ struct BuiltinTypes
   Type tI32 = makeNumeric("i32");
   Type tI64 = makeNumeric("i64");
   Type tBool = make("bool");
+  Type tNull = make("nullT");
 
   Type* get(std::string_view name);
 

@@ -365,6 +365,14 @@ const char* wlangGrammarStr = R"STR(
       result.emplace_back(expression, expression->source);
     }} Expression'<{result}>
   |
+    "null"
+    {{
+      Expression* expression = makeNode<Expression>();
+      expression->val = Null{};
+      expression->source = source;
+      result.emplace_back(expression, expression->source);
+    }}
+  |
     "!"
     {{
       result.emplace_back(Op::Type::LogicalNot, source);

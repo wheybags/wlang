@@ -11,6 +11,7 @@ const std::vector<std::pair<std::string_view, Token::Type>> keywordMapping
   {"false",  Token::Type::False},
   {"else",   Token::Type::Else},
   {"true",   Token::Type::True},
+  {"null",   Token::Type::Null},
   {"if",     Token::Type::If},
 };
 

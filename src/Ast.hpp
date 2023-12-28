@@ -80,6 +80,8 @@ struct StringConstant
   std::string val;
 };
 
+class Null {};
+
 class Expression
 {
 public:
@@ -88,7 +90,8 @@ public:
     XX(integerConstant, IntegerConstant, IntegerConstant) \
     XX(stringConstant, StringConstant, StringConstant) \
     XX(boolean, Bool, bool ) \
-    XX(op, Op, Op*)
+    XX(op, Op, Op*) \
+    XX(null, Null, Null)
   #define CLASS_NAME Val
   #include "CreateTaggedUnion.hpp"
 

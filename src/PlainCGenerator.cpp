@@ -279,6 +279,12 @@ std::string PlainCGenerator::generate(const Expression* node)
       break;
     }
 
+    case Expression::Val::Tag::Null:
+    {
+      str += "0";
+      break;
+    }
+
     case Expression::Val::Tag::Op:
     {
       const Op* opNode = node->val.op();

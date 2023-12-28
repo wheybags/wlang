@@ -75,7 +75,7 @@ void SemanticAnalyser::run(Assignment* assignment)
 {
   run(assignment->left);
   run(assignment->right);
-  release_assert(assignment->left->type == assignment->right->type);
+  release_assert(this->canAssign(assignment->right->type, assignment->left->type));
 }
 
 void SemanticAnalyser::run(Expression* expression)
@@ -112,6 +112,12 @@ void SemanticAnalyser::run(Expression* expression)
     case Expression::Val::Tag::Bool:
     {
       expression->type = BuiltinTypes::inst.tBool.reference();
+      break;
+    }
+
+    case Expression::Val::Tag::Null:
+    {
+      expression->type = BuiltinTypes::inst.tNull.reference();
       break;
     }
 
@@ -247,7 +253,7 @@ void SemanticAnalyser::run(VariableDeclaration* variableDeclaration)
   if (variableDeclaration->initialiser)
   {
     run(variableDeclaration->initialiser);
-    release_assert(variableDeclaration->initialiser->type == variableDeclaration->type);
+    release_assert(this->canAssign(variableDeclaration->initialiser->type, variableDeclaration->type));
   }
 }
 
@@ -377,6 +383,7 @@ void SemanticAnalyser::resolveScopeIds(Expression* expression)
     case Expression::Val::Tag::IntegerConstant:
     case Expression::Val::Tag::Bool:
     case Expression::Val::Tag::StringConstant:
+    case Expression::Val::Tag::Null:
       break;
 
     case Expression::Val::Tag::Op:
@@ -464,5 +471,16 @@ void SemanticAnalyser::resolveScopeIds(Assignment* assignment)
 void SemanticAnalyser::resolveScopeIds(ReturnStatement* returnStatement)
 {
   resolveScopeIds(returnStatement->retval);
+}
+
+bool SemanticAnalyser::canAssign(const TypeRef& source, const TypeRef& destination)
+{
+  if (source == destination)
+    return true;
+
+  if (destination.pointerDepth > 0 && source == BuiltinTypes::inst.tNull.reference())
+    return true;
+
+  return false;
 }
 

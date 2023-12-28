@@ -87,5 +87,7 @@ i32 main()
   str = "ASD";
   str.size();
 
+  i8* ptr = null;
+
   return 0;
 }
