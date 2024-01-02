@@ -150,7 +150,7 @@ void PlainCGenerator::generate(const Statement* node, OutputString& str)
     }
     case Statement::Tag::Variable:
     {
-      str.appendLine(generate(node->variable()) + ";");
+      generate(node->variable(), str);
       break;
     }
     case Statement::Tag::Assignment:
@@ -198,33 +198,42 @@ void PlainCGenerator::generate(const Statement* node, OutputString& str)
   }
 }
 
-std::string PlainCGenerator::generate(const VariableDeclaration* variableDeclaration, bool suppressInitialiser)
+void PlainCGenerator::generate(const VariableDeclaration* variableDeclaration, OutputString& str, bool suppressInitialiser)
 {
   this->referenceType(variableDeclaration->type);
 
   Class* typeClass = variableDeclaration->type.id.resolved.type()->typeClass;
 
-  std::string str;
+  std::string line;
   if (typeClass)
   {
     release_assert(!variableDeclaration->initialiser && "not supported yet");
-
-    // TODO: reimplement this at the AST level?
-    str += strType(variableDeclaration->type) + " " + variableDeclaration->name;// + "; ";
-//    str += strType(variableDeclaration->type) + "__init_empty(&" + variableDeclaration->name + ")";
+    line += strType(variableDeclaration->type) + " " + variableDeclaration->name;// + "; ";
   }
   else
   {
-    str += strType(variableDeclaration->type) + " " + variableDeclaration->name;
+    line += strType(variableDeclaration->type) + " " + variableDeclaration->name;
   }
 
-  if (!suppressInitialiser && variableDeclaration->initialiser)
+  std::string line2;
+  if (!suppressInitialiser)
   {
-    str += " = ";
-    str += generate(variableDeclaration->initialiser);
+    if (variableDeclaration->initialiser)
+    {
+      line += " = ";
+      line += generate(variableDeclaration->initialiser);
+    }
+    else if (variableDeclaration->type.pointerDepth == 0 && variableDeclaration->type.id.resolved.type()->typeClass)
+    {
+      const Func* defaultConstructor = variableDeclaration->type.id.resolved.type()->typeClass->memberScope->functions.at("defaultConstruct").item;
+      line2 = defaultConstructor->mangledName + "(&" + variableDeclaration->name + ")";
+      this->referenceFunction(defaultConstructor);
+    }
   }
 
-  return str;
+  str.appendLine(line + ";");
+  if (!line2.empty())
+    str.appendLine(line2 + ";");
 }
 
 std::string PlainCGenerator::generate(const Expression* node)
@@ -476,33 +485,11 @@ void PlainCGenerator::generateClassDeclaration(const Class* node, OutputString& 
   str.appendLine("{");
 
   for (VariableDeclaration* variableDeclaration : node->memberVariables)
-    str.appendLine(generate(variableDeclaration, true) + ";");
+    generate(variableDeclaration, str, true);
 
   str.appendLine("};");
   str.appendLine();
 }
-
-//void PlainCGenerator::generate(const Class* node)
-//{
-//  this->classes.appendLine("struct " + node->type->name);
-//  this->classes.appendLine("{");
-//
-//  this->functionPrototypes.appendLine("void " + node->type->name + "__init_empty(" + node->type->name + "* obj);");
-//  this->functionBodies.appendLine("void " + node->type->name + "__init_empty(" + node->type->name + "* obj)");
-//  this->functionBodies.appendLine("{");
-//
-//  for (const std::string& name : node->memberVariableOrder)
-//  {
-//    VariableDeclaration* variableDeclaration = node->memberVariables.at(name);
-//    this->classes.appendLine(strType(variableDeclaration->type) + " " + variableDeclaration->name + ";");
-//    this->functionBodies.appendLine("obj->" + variableDeclaration->name + " = " + generate(variableDeclaration->initialiser) + ";");
-//  }
-//
-//  this->functionBodies.appendLine("}");
-//  this->functionBodies.appendLine();
-//  this->classes.appendLine("};");
-//  this->classes.appendLine();
-//}
 
 std::string PlainCGenerator::strType(const TypeRef& type)
 {

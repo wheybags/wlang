@@ -22,7 +22,7 @@ private:
   void generate(const Block* block, OutputString& str);
   void generate(const Statement* node, OutputString& str);
   std::string generate(const Expression* node);
-  std::string generate(const VariableDeclaration* variableDeclaration, bool suppressInitialiser = false);
+  void generate(const VariableDeclaration* variableDeclaration, OutputString& str, bool suppressInitialiser = false);
 //  void generate(const Class* node);
   std::string strType(const TypeRef& type);
 

@@ -8,6 +8,7 @@
 #include "CCompiler.hpp"
 #include "CCompilerMSVC.hpp"
 #include "CCompilerClang.hpp"
+#include "ClassDefaultsGenerator.hpp"
 
 int WLangMain(int argc, char** argv)
 {
@@ -24,6 +25,7 @@ int WLangMain(int argc, char** argv)
     AstChunk* ast = mergedAst.create(path);
     std::vector<Token> tokens = tokenise(inputString);
     parse(*ast, tokens);
+    generateClassDefaults(*ast);
     mergedAst.link(ast);
   };
 

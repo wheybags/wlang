@@ -1,7 +1,7 @@
 class string
 {
-  i8* data;
-  i64 length;
+  i8* data = null;
+  i64 length = 0i64;
 
   i64 size(string* this) { return this.length; }
 }
