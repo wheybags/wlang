@@ -36,6 +36,7 @@ const std::vector<std::pair<std::string_view, Token::Type>> tokenMapping
   {"*", Token::Type::Asterisk},
   {"/", Token::Type::Divide},
   {".", Token::Type::Dot},
+  {"&", Token::Type::Ampersand},
 };
 
 std::optional<int64_t> parseInteger(std::string_view str)

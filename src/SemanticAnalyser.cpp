@@ -159,6 +159,15 @@ void SemanticAnalyser::run(Expression* expression)
           break;
         }
 
+        case Op::Type::AddressOf:
+        {
+          Expression* arg = op->args.unary().expression;
+          run(arg);
+          expression->type = arg->type;
+          expression->type.pointerDepth++;
+          break;
+        }
+
         case Op::Type::Call:
         {
           Op::Call& callData = op->args.call();
@@ -408,6 +417,7 @@ void SemanticAnalyser::resolveScopeIds(Expression* expression)
 
         case Op::Type::UnaryMinus:
         case Op::Type::LogicalNot:
+        case Op::Type::AddressOf:
         {
           resolveScopeIds(op->args.unary().expression);
           break;

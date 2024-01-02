@@ -143,6 +143,7 @@ Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& inter
       }
       case Op::Type::LogicalNot:
       case Op::Type::UnaryMinus:
+      case Op::Type::AddressOf:
       {
         Op::Unary unary;
         unary.expression = intermediate[i+1].val.expression();
@@ -232,7 +233,7 @@ Expression* Parser::resolveIntermediateExpression(IntermediateExpression&& inter
     if (!intermediate[i].val.isOp())
       continue;
     Op::Type op = intermediate[i].val.op();
-    if (op == Op::Type::LogicalNot || op == Op::Type::UnaryMinus)
+    if (op == Op::Type::LogicalNot || op == Op::Type::UnaryMinus || op == Op::Type::AddressOf)
       outputOp(op, i);
   }
 

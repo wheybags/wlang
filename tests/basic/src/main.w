@@ -81,7 +81,7 @@ i32 main()
   //str.length = 8i64;
   //printString(str);
 
-  printString("hello w.");
+  printString(&"hello w.");
 
   string str;
   str = "ASD";

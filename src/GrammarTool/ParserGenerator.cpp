@@ -111,6 +111,7 @@ ParserSource generateParser(const Grammar& grammar)
     {"\"false\"", "False"},
     {"\"extern\"", "Extern"},
     {"\"null\"", "Null"},
+    {"\"&\"", "Ampersand"},
     {"$End", "End"},
   };
 

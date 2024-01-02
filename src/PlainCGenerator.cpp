@@ -412,6 +412,13 @@ std::string PlainCGenerator::generate(const Expression* node)
           str += ")";
           break;
         }
+        case Op::Type::AddressOf:
+        {
+          str += "(&";
+          str += generate(opNode->args.unary().expression);
+          str += ")";
+          break;
+        }
         case Op::Type::Call:
         {
           const Op::Call& call = opNode->args.call();

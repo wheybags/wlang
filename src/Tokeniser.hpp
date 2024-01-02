@@ -68,6 +68,7 @@ struct Token
     False,
     Extern,
     Null,
+    Ampersand,
     End
   };
 

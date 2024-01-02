@@ -382,6 +382,11 @@ const char* wlangGrammarStr = R"STR(
     {{
       result.emplace_back(Op::Type::UnaryMinus, source);
     }} Expression<{result}>
+  |
+    "&"
+    {{
+      result.emplace_back(Op::Type::AddressOf, source);
+    }} Expression<{result}>
   ;
 
 

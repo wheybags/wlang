@@ -186,6 +186,7 @@ struct Op
     Multiply,
     Divide,
     MemberAccess,
+    AddressOf,
     ENUM_END
   };
 
