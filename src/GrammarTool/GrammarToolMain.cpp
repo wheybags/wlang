@@ -13,7 +13,8 @@ const char* wlangGrammarStr = R"STR(
       rootNode->funcList->scope = makeNode<Scope>();
       pushScope(rootNode->funcList->scope);
 
-    }} FuncList<{rootNode->funcList}> $End
+    }}
+    FuncList<{rootNode->funcList}> $End
     {{
       popScope();
       return rootNode;
@@ -49,6 +50,8 @@ const char* wlangGrammarStr = R"STR(
     }}
     "{" ClassMemberList<{newClass, funcList}> "}"
     FuncList'<{funcList}>
+  |
+    Nil
   ;
 
   ClassMemberList <{void}> <{Class* newClass, FuncList* funcList}> =
