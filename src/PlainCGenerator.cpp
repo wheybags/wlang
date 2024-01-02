@@ -441,6 +441,11 @@ std::string PlainCGenerator::generate(const Expression* node)
           {
             // is member call
             const Op* callOp = call.callable->val.op();
+            const Expression* object = callOp->args.memberAccess().expression;
+
+            if (object->type.id.resolved.type()->builtin || object->type.pointerDepth > 0)
+              break;
+
             this->referenceFunction(callOp->args.memberAccess().member.resolved.function());
 
             str += "("+ callOp->args.memberAccess().member.resolved.function()->mangledName + "(";

@@ -186,6 +186,14 @@ void SemanticAnalyser::run(Expression* expression)
             Expression* object = callOp->args.memberAccess().expression;
             run(object);
 
+            if (object->type.id.resolved.type()->builtin || object->type.pointerDepth > 0)
+            {
+              // can ignore "constructor calls" on builtin types
+              release_assert(callOp->args.memberAccess().member.str == "defaultConstruct");
+              expression->type = BuiltinTypes::inst.tI32.reference();
+              break;
+            }
+
             release_assert(object->type.id.resolved.type()->typeClass);
             callOp->args.memberAccess().member.resolveFunction(*object->type.id.resolved.type()->typeClass->memberScope);
 

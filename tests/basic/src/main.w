@@ -62,7 +62,17 @@
 //}
 
 
-extern i8* malloc(i64 size);
+class A
+{
+  i32 x = 10;
+  i32 y;
+}
+
+class B
+{
+  A a;
+  i32 y = 20;
+}
 
 
 i32 main()

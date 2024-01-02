@@ -2,6 +2,7 @@
 #include "AstChunk.hpp"
 #include "BuiltinTypes.hpp"
 
+// NB! this is called before type resolution
 void generateClassDefaults(AstChunk& ast)
 {
   for (Class* classN : ast.root->funcList->classes)
@@ -49,6 +50,41 @@ void generateClassDefaults(AstChunk& ast)
           assignment->right = variableDeclaration->initialiser;
 
           *statement = assignment;
+          block->statements.emplace_back(statement);
+        }
+        else
+        {
+          Expression* memberExpression = ast.makeNode<Expression>();
+          {
+            Expression* thisExpression = ast.makeNode<Expression>();
+            thisExpression->val = ScopeId("this");
+
+            Op* op = ast.makeNode<Op>();
+            op->type = Op::Type::MemberAccess;
+            op->args = Op::MemberAccess{.expression = thisExpression, .member = ScopeId(variableDeclaration->name)};
+
+            memberExpression->val = op;
+          }
+
+          Expression* constructorExpression = ast.makeNode<Expression>();
+          {
+            Op* op = ast.makeNode<Op>();
+            op->type = Op::Type::MemberAccess;
+            op->args = Op::MemberAccess{.expression = memberExpression, .member = ScopeId("defaultConstruct")};
+            constructorExpression->val = op;
+          }
+
+          Expression* callExpression = ast.makeNode<Expression>();
+          {
+            Op* op = ast.makeNode<Op>();
+            op->type = Op::Type::Call;
+            op->args = Op::Call {.callable = constructorExpression, .callArgs = {}};
+            callExpression->val = op;
+          }
+
+          Statement* statement = ast.makeNode<Statement>();
+          *statement = callExpression;
+
           block->statements.emplace_back(statement);
         }
       }
