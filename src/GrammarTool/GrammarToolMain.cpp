@@ -119,24 +119,26 @@ const char* wlangGrammarStr = R"STR(
     }}
   ;
 
-  Block <{Block*}> =
-    "{"
+  Block <{Block*}>
     {{
       Block* block = makeNode<Block>();
       block->scope = makeNode<Scope>();
       block->scope->parent = getScope();
       pushScope(block->scope);
     }}
-    StatementList<{block}> "}"
+  =
+    "{" StatementList<{block}> "}"
+  ;
     {{
       popScope();
       return block;
     }}
-  ;
 
 
   StatementList <{void}> <{Block* block}> =
-    Statement {{ block->statements.push_back(v0); }} StatementList'<{block}>;
+    Statement {{ block->statements.push_back(v0); }} StatementList'<{block}>
+  |
+    Nil;
 
 
   StatementList' <{void}> <{Block* block}> =

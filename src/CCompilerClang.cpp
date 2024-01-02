@@ -6,7 +6,7 @@ void CCompilerClang::compile(const fs::path& cFilePath, const fs::path& objectFi
 {
   std::string output;
   int32_t exitCode = 0;
-  release_assert(runProcess({this->compilerPath, "-c", cFilePath.string(), "-o", objectFilePath}, output, exitCode));
+  release_assert(runProcess({this->compilerPath, "-g", "-c", cFilePath.string(), "-o", objectFilePath}, output, exitCode));
   if (exitCode != 0)
     message_and_abort(output.c_str());
 }

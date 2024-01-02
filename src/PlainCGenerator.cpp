@@ -72,7 +72,7 @@ std::string PlainCGenerator::output()
   {
     std::string charArrayName = pair.second + "_charArray";
     stringConstantsOutput.appendLine("static const char " + charArrayName + "[] = " + pair.first + ";");
-    stringConstantsOutput.appendLine("static struct string " + pair.second + " = { .data = (char*)" + charArrayName + ", .length = sizeof(" + charArrayName + ") - 1 };");
+    stringConstantsOutput.appendLine("static struct string " + pair.second + " = { .data = (char*)" + charArrayName + ", .length = sizeof(" + charArrayName + ") - 1, .capacity = -1 };");
   }
 
   return declarations.str + stringConstantsOutput.str + functionBodies.str;
@@ -443,7 +443,7 @@ std::string PlainCGenerator::generate(const Expression* node)
             const Op* callOp = call.callable->val.op();
             const Expression* object = callOp->args.memberAccess().expression;
 
-            if (object->type.id.resolved.type()->builtin || object->type.pointerDepth > 0)
+            if (object->type.id.resolved.type()->builtin)
               break;
 
             this->referenceFunction(callOp->args.memberAccess().member.resolved.function());

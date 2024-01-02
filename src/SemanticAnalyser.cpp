@@ -75,7 +75,7 @@ void SemanticAnalyser::run(Assignment* assignment)
 {
   run(assignment->left);
   run(assignment->right);
-  release_assert(this->canAssign(assignment->right->type, assignment->left->type));
+  release_assert(this->canAssign(assignment->left->type, assignment->right->type));
 }
 
 void SemanticAnalyser::run(Expression* expression)
@@ -134,7 +134,7 @@ void SemanticAnalyser::run(Expression* expression)
           Op::Binary& binary = op->args.binary();
           run(binary.left);
           run(binary.right);
-          release_assert(binary.left->type == binary.right->type);
+          canCompare(binary.left->type, binary.right->type);
           expression->type = BuiltinTypes::inst.tBool.reference();
           break;
         }
@@ -173,12 +173,18 @@ void SemanticAnalyser::run(Expression* expression)
           Op::Call& callData = op->args.call();
 
           Func* function = nullptr;
-          if (callData.callable->val.isId())
+          if (callData.callable->val.isId()) // free function
           {
             function = callData.callable->val.id().resolved.function();
             release_assert(callData.callArgs.size() == function->args.size());
+
+            for (int32_t i = 0; i < int32_t(callData.callArgs.size()); i++)
+            {
+              run(callData.callArgs[i]);
+              release_assert(callData.callArgs[i]->type == function->args[i]->type);
+            }
           }
-          else
+          else // member call
           {
             release_assert(callData.callable->val.isOp());
             Op* callOp = callData.callable->val.op();
@@ -186,7 +192,7 @@ void SemanticAnalyser::run(Expression* expression)
             Expression* object = callOp->args.memberAccess().expression;
             run(object);
 
-            if (object->type.id.resolved.type()->builtin || object->type.pointerDepth > 0)
+            if (object->type.id.resolved.type()->builtin)
             {
               // can ignore "constructor calls" on builtin types
               release_assert(callOp->args.memberAccess().member.str == "defaultConstruct");
@@ -199,13 +205,15 @@ void SemanticAnalyser::run(Expression* expression)
 
             function = callOp->args.memberAccess().member.resolved.function();
             release_assert(callData.callArgs.size() + 1 == function->args.size());
+
+            for (int32_t i = 1; i < int32_t(callData.callArgs.size()); i++)
+            {
+              run(callData.callArgs[i-1]);
+              release_assert(callData.callArgs[i-1]->type == function->args[i]->type);
+            }
           }
 
-          for (int32_t i = 0; i < int32_t(callData.callArgs.size()); i++)
-          {
-            run(callData.callArgs[i]);
-            release_assert(callData.callArgs[i]->type == function->args[i]->type);
-          }
+
 
           expression->type = function->returnType;
           break;
@@ -270,7 +278,7 @@ void SemanticAnalyser::run(VariableDeclaration* variableDeclaration)
   if (variableDeclaration->initialiser)
   {
     run(variableDeclaration->initialiser);
-    release_assert(this->canAssign(variableDeclaration->initialiser->type, variableDeclaration->type));
+    release_assert(this->canAssign(variableDeclaration->type, variableDeclaration->initialiser->type));
   }
 }
 
@@ -369,6 +377,7 @@ void SemanticAnalyser::resolveScopeIds(IfElseChain* ifElseChain)
   for (int32_t i = 0; i < int32_t(ifElseChain->items.size()); i++)
   {
     IfElseChainItem* item = ifElseChain->items[i];
+    resolveScopeIds(item->condition);
     resolveScopeIds(item->block);
   }
 }
@@ -491,12 +500,23 @@ void SemanticAnalyser::resolveScopeIds(ReturnStatement* returnStatement)
   resolveScopeIds(returnStatement->retval);
 }
 
-bool SemanticAnalyser::canAssign(const TypeRef& source, const TypeRef& destination)
+bool SemanticAnalyser::canCompare(const TypeRef& left, const TypeRef& right)
 {
-  if (source == destination)
+  if (right == left)
     return true;
 
-  if (destination.pointerDepth > 0 && source == BuiltinTypes::inst.tNull.reference())
+  if (left.pointerDepth > 0 && right == BuiltinTypes::inst.tNull.reference())
+    return true;
+
+  return false;
+}
+
+bool SemanticAnalyser::canAssign(const TypeRef& left, const TypeRef& right)
+{
+  if (right == left)
+    return true;
+
+  if (left.pointerDepth > 0 && right == BuiltinTypes::inst.tNull.reference())
     return true;
 
   return false;

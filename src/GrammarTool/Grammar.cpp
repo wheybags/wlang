@@ -379,7 +379,21 @@ std::vector<std::vector<std::string>> Grammar::first(const std::string& name) co
     {
       for (const std::string& item: x)
       {
-        release_assert(!tmp.contains(item) && "duplicate first!");
+        if (tmp.contains(item))
+        {
+          fprintf(stderr, "Duplicate first in %s\n", name.c_str());
+          for (const std::vector<std::string>& x2: retval)
+          {
+            fprintf(stderr, "    ");
+            for (const std::string& item2: x2)
+            {
+              fprintf(stderr, "%s ", item2.c_str());
+            }
+            fprintf(stderr, "\n");
+          }
+
+          release_assert(false);
+        }
         tmp.insert(item);
       }
     }

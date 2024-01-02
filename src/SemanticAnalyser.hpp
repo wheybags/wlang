@@ -32,7 +32,8 @@ private:
   void resolveScopeIds(ReturnStatement* returnStatement);
   void resolveScopeIds(TypeRef& typeRef);
 
-  bool canAssign(const TypeRef& source, const TypeRef& destination);
+  bool canCompare(const TypeRef& left, const TypeRef& right);
+  bool canAssign(const TypeRef& left, const TypeRef& right);
 
 private:
   std::vector<Scope*> scopeStack;

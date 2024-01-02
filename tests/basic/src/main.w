@@ -91,11 +91,13 @@ i32 main()
   //str.length = 8i64;
   //printString(str);
 
-  printString(&"hello w.");
+  print(&"hello w.");
 
   string str;
-  str = "ASD";
-  str.size();
+  str.append(&"test ");
+  str.append(&"appending!");
+
+  print(&str);
 
   i8* ptr = null;
 
